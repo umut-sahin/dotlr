@@ -1,0 +1,15 @@
+# Build
+build
+
+# Environment
+.env
+
+# JetBrains IDEs
+.idea
+
+# Rust
+/target
+Cargo.lock
+
+# Visual Studio Code
+.vscode

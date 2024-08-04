@@ -1,0 +1,11 @@
+{
+  "name": "Sample",
+  "rating": 4.2,
+  "homepage": null,
+  "is_active": true,
+  "tags": ["a", "b", "c"],
+  "metadata": {
+    "foo": "bar",
+    "bar": 10
+  }
+}
