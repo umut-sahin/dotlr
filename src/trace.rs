@@ -93,10 +93,10 @@ impl<'i> Trace<'i> {
                     format!("Shift {}", next_state)
                 },
                 Action::Reduce { rule_index } => {
-                    format!("Reduce{} {}", rule_index, grammar.rules()[rule_index])
+                    format!("Reduce {} ({})", rule_index, grammar.rules()[rule_index])
                 },
                 Action::Accept { rule_index } => {
-                    format!("Accept{} {}", rule_index, grammar.rules()[rule_index])
+                    format!("Accept {} ({})", rule_index, grammar.rules()[rule_index])
                 },
             };
 
