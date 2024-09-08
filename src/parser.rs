@@ -13,36 +13,8 @@ pub struct Parser {
 
 impl Parser {
     /// Crates an LR(1) parser of a grammar.
-    pub fn new(grammar: Grammar) -> Result<Parser, ParserError> {
-        {
-            if grammar.rules().is_empty() {
-                return Err(ParserError::EmptyGrammar);
-            }
-            for rule in grammar.rules() {
-                for atomic_pattern in rule.pattern() {
-                    match atomic_pattern {
-                        AtomicPattern::Symbol(symbol) => {
-                            if !grammar.symbols().contains(symbol) {
-                                return Err(ParserError::UndefinedSymbol {
-                                    symbol: symbol.clone(),
-                                    rule: rule.clone(),
-                                });
-                            }
-                        },
-                        AtomicPattern::Token(token) => {
-                            if let Token::Regex(regex_token) = token {
-                                if !grammar.regular_expressions().contains_key(regex_token) {
-                                    return Err(ParserError::UndefinedRegexToken {
-                                        regex_token: regex_token.clone(),
-                                        rule: rule.clone(),
-                                    });
-                                }
-                            }
-                        },
-                    }
-                }
-            }
-        }
+    pub fn lr(grammar: Grammar) -> Result<Parser, ParserError> {
+        Parser::check_grammar_internal(&grammar)?;
 
         let first_table = FirstTable::construct(&grammar);
         let follow_table = FollowTable::construct(&grammar, &first_table);
@@ -50,17 +22,20 @@ impl Parser {
         let parsing_tables = ParsingTables::construct(&grammar, &follow_table, &automaton)?;
 
         let parser = Parser { grammar, first_table, follow_table, automaton, parsing_tables };
-        for (state, action_map) in parser.action_table().iter().enumerate() {
-            for (token, actions) in action_map.iter() {
-                if actions.len() > 1 {
-                    let token = token.clone();
-                    let parser = Box::new(parser);
-                    return Err(ParserError::Conflict { parser, state, token });
-                }
-            }
-        }
+        parser.check_conflicts_internal()
+    }
 
-        Ok(parser)
+    /// Crates an LALR(1) parser of a grammar.
+    pub fn lalr(grammar: Grammar) -> Result<Parser, ParserError> {
+        Parser::check_grammar_internal(&grammar)?;
+
+        let first_table = FirstTable::construct(&grammar);
+        let follow_table = FollowTable::construct(&grammar, &first_table);
+        let automaton = Automaton::construct(&grammar, &first_table).to_lalr();
+        let parsing_tables = ParsingTables::construct(&grammar, &follow_table, &automaton)?;
+
+        let parser = Parser { grammar, first_table, follow_table, automaton, parsing_tables };
+        parser.check_conflicts_internal()
     }
 }
 
@@ -159,6 +134,52 @@ impl Parser {
 }
 
 impl Parser {
+    /// Internal grammar checks.
+    fn check_grammar_internal(grammar: &Grammar) -> Result<(), ParserError> {
+        if grammar.rules().is_empty() {
+            return Err(ParserError::EmptyGrammar);
+        }
+        for rule in grammar.rules() {
+            for atomic_pattern in rule.pattern() {
+                match atomic_pattern {
+                    AtomicPattern::Symbol(symbol) => {
+                        if !grammar.symbols().contains(symbol) {
+                            return Err(ParserError::UndefinedSymbol {
+                                symbol: symbol.clone(),
+                                rule: rule.clone(),
+                            });
+                        }
+                    },
+                    AtomicPattern::Token(token) => {
+                        if let Token::Regex(regex_token) = token {
+                            if !grammar.regular_expressions().contains_key(regex_token) {
+                                return Err(ParserError::UndefinedRegexToken {
+                                    regex_token: regex_token.clone(),
+                                    rule: rule.clone(),
+                                });
+                            }
+                        }
+                    },
+                }
+            }
+        }
+        Ok(())
+    }
+
+    /// Internal conflict checks.
+    fn check_conflicts_internal(self) -> Result<Parser, ParserError> {
+        for (state, action_map) in self.action_table().iter().enumerate() {
+            for (token, actions) in action_map.iter() {
+                if actions.len() > 1 {
+                    let token = token.clone();
+                    let parser = Box::new(self);
+                    return Err(ParserError::Conflict { parser, state, token });
+                }
+            }
+        }
+        Ok(self)
+    }
+
     /// Internal parsing logic.
     fn parse_and_trace_internal<'i>(
         &self,

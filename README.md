@@ -30,6 +30,7 @@
   * [5) Constructing ACTION and GOTO tables](#5-constructing-action-and-goto-tables)
   * [6) Tokenizing the input](#6-tokenizing-the-input)
   * [7) Parsing the tokens](#7-parsing-the-tokens)
+* [Can I have an LALR(1) parser instead of an LR(1) parser?](#can-i-have-an-lalr1-parser-instead-of-an-lr1-parser)
 * [Any benchmarks?](#any-benchmarks)
 * [Can I modify it?](#can-i-modify-it)
 * [Which resources did you use when creating this?](#which-resources-did-you-use-when-creating-this)
@@ -307,7 +308,7 @@ fn main() {
       return;
     }
   };
-  let parser = match Parser::new(grammar) {
+  let parser = match Parser::lr(grammar) {
     Ok(parser) => parser,
     Err(error) => {
       eprintln!("parser error: {}", error);
@@ -966,6 +967,68 @@ E
       └─ 1
 ```
 
+## Can I have an LALR(1) parser instead of an LR(1) parser?
+
+Yes, `dotlr` supports both LR(1) and LALR(1) parsers!
+
+In the CLI, you can simply use the `--lalr` option:
+
+```shell
+dotlr --lalr grammar.lr "1 + 2 * 3"
+```
+
+And in the API, you can use `Parser::lalr` instead of `Parser::lr`:
+
+```rust
+Parser::lalr(grammar)
+```
+
+LALR(1) parser is construction is very similar to LR(1) parser construction. The only difference is
+that after [4) Constructing the LR(1) automaton](#4-constructing-the-lr1-automaton), there is
+another step to reduce the LR(1) automaton to an LALR(1) automaton, using the following algorithm:
+
+```python
+# Iterate over the state pairs of the automaton.
+for state1 in automaton.states:
+  for state2 in automaton.states:
+    # Check if the states share the same core.
+    # Which means their items are the same ignoring the lookaheads.
+
+    # Here is an example:
+    # ...
+    # +-------+------------------------+--------------+---------------+
+    # | 3     |  T -> %id . '(' E ')'  | { $, '+' }   |  '('  ->  4   |
+    # |       |  T -> %id .            | { $, '+' }   |               |
+    # +-------+------------------------+--------------+---------------+
+    # ...
+    # +-------+------------------------+--------------+---------------+
+    # | 6     |  T -> %id . '(' E ')'  | { ')', '+' } |  '('  ->  7   |
+    # |       |  T -> %id .            | { ')', '+' } |               |
+    # +-------+------------------------+--------------+---------------+
+    # ...
+
+    if state1.core == state2.core:
+      # Merge the states.
+      # Which is combining lookaheads of the same items.
+      # Transitions should be mapped to the new states as well.
+
+      # Here is the merge of the two states in the example above:
+      # ...
+      # +-------+------------------------+-----------------+--------------+
+      # | 3     |  T -> %id . '(' E ')'  | { $, '+', ')' } |  '('  ->  4  |
+      # |       |  T -> %id .            | { $, '+', ')' } |              |
+      # +-------+------------------------+-----------------+--------------+
+      # ...
+
+      automaton.merge_states(state1, state2)
+```
+
+the actual implementation is a bit more involved, but the idea is exactly this.
+Luckily, it's documented extensively at
+[automaton.rs](https://github.com/umut-sahin/dotlr/blob/main/src/automaton.rs)
+(search for `to_lalr`). I highly recommend reading the comments in the
+source to understand the nuances of the implementation.
+
 ## Any benchmarks?
 
 Yes, even though `dotlr` isn't a performance focused project, I thought it'd be interesting to have
@@ -983,13 +1046,27 @@ This command prints the following in my own computer with an `Intel i7-12700K` C
 ```
 ...
 
-Parsing JSON/Simple     time:   [262.04 ms 263.31 ms 264.60 ms]
-                        thrpt:  [94.218 MiB/s 94.680 MiB/s 95.138 MiB/s]
+Parsing JSON/Simple LR(1)
+                        time:   [260.33 ms 265.74 ms 269.29 ms]
+                        thrpt:  [92.578 MiB/s 93.815 MiB/s 95.765 MiB/s]
 
 ...
 
-Parsing JSON/Optimized  time:   [181.44 ms 181.63 ms 181.82 ms]
-                        thrpt:  [137.11 MiB/s 137.26 MiB/s 137.40 MiB/s]
+Parsing JSON/Simple LALR(1)
+                        time:   [287.93 ms 288.71 ms 289.49 ms]
+                        thrpt:  [86.119 MiB/s 86.350 MiB/s 86.583 MiB/s]
+
+...
+
+Parsing JSON/Optimized LR(1)
+                        time:   [211.55 ms 211.71 ms 211.90 ms]
+                        thrpt:  [117.65 MiB/s 117.76 MiB/s 117.85 MiB/s]
+
+...
+
+Parsing JSON/Optimized LALR(1)
+                        time:   [192.66 ms 193.53 ms 194.39 ms]
+                        thrpt:  [128.25 MiB/s 128.82 MiB/s 129.40 MiB/s]
 
 ...
 ```

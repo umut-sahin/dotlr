@@ -24,17 +24,26 @@ fn benchmark_parsing_json(criterion: &mut Criterion) {
 
     for (name, definition) in grammars {
         let grammar = Grammar::parse(definition).unwrap();
-        let parser = Parser::new(grammar).unwrap();
-        let tokens = parser.tokenize(input).unwrap();
-        group.bench_function(name, |b| {
-            b.iter_batched(
-                || tokens.clone(),
-                |tokens| {
-                    criterion::black_box(parser.parse(tokens).unwrap());
+        for lalr in [false, true] {
+            let parser = if lalr {
+                Parser::lalr(grammar.clone()).unwrap()
+            } else {
+                Parser::lr(grammar.clone()).unwrap()
+            };
+            let tokens = parser.tokenize(input).unwrap();
+            group.bench_function(
+                format!("{} {}(1)", name, if lalr { "LALR" } else { "LR" }),
+                |b| {
+                    b.iter_batched(
+                        || tokens.clone(),
+                        |tokens| {
+                            criterion::black_box(parser.parse(tokens)).unwrap();
+                        },
+                        BatchSize::PerIteration,
+                    );
                 },
-                BatchSize::PerIteration,
             );
-        });
+        }
     }
 }
 

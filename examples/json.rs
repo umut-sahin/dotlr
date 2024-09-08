@@ -143,7 +143,7 @@ fn main() {
     let grammar_string = include_str!("../assets/grammars/correct/json.lr");
     let grammar = Grammar::parse(grammar_string).expect("invalid grammar");
 
-    let parser = Parser::new(grammar).expect("unsupported grammar");
+    let parser = Parser::lalr(grammar).expect("unsupported grammar");
 
     let input = include_str!("../assets/data/sample.json");
     let tokens = parser.tokenize(input).expect("tokenization failed");

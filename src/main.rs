@@ -1,4 +1,5 @@
 use {
+    clap::Parser as Clap,
     colored::Colorize,
     dotlr::{
         Grammar,
@@ -9,49 +10,73 @@ use {
         error::ReadlineError,
         DefaultEditor,
     },
-    std::process::ExitCode,
+    std::{
+        path::PathBuf,
+        process::ExitCode,
+    },
 };
 
-fn main() -> ExitCode {
-    let mut args = std::env::args().skip(1);
+#[derive(Clap)]
+struct Args {
+    /// Create an LALR(1) parser instead of an LR(1) parser.
+    #[arg(long)]
+    lalr: bool,
 
-    let grammar_file = match args.next() {
-        Some(arg) => arg,
-        None => {
-            eprintln!("{} grammar file is not specified", "usage error:".red().bold());
-            return ExitCode::FAILURE;
-        },
-    };
-    let grammar_string = match std::fs::read_to_string(grammar_file) {
+    /// Grammar to parse.
+    grammar: PathBuf,
+
+    /// Input to parse.
+    input: Option<String>,
+}
+
+fn main() -> ExitCode {
+    let args = Args::parse();
+
+    let grammar = match std::fs::read_to_string(args.grammar) {
         Ok(content) => content,
         Err(error) => {
             eprintln!("{} grammar file cannot be read ({})", "io error:".red().bold(), error);
             return ExitCode::FAILURE;
         },
     };
-    let grammar = match Grammar::parse(&grammar_string) {
+    let grammar = match Grammar::parse(&grammar) {
         Ok(grammar) => grammar,
         Err(error) => {
             eprintln!("{} {}", "grammar error:".red().bold(), error);
             return ExitCode::FAILURE;
         },
     };
-    let parser = match Parser::new(grammar) {
-        Ok(parser) => parser,
-        Err(error) => {
-            eprintln!("{} {}", "parser error:".red().bold(), error);
-            if let ParserError::Conflict { parser, .. } = error {
-                parser.dump();
+    let parser = {
+        if args.lalr {
+            match Parser::lalr(grammar) {
+                Ok(parser) => parser,
+                Err(error) => {
+                    eprintln!("{} {}", "lr parser error:".red().bold(), error);
+                    if let ParserError::Conflict { parser, .. } = error {
+                        parser.dump();
+                    }
+                    return ExitCode::FAILURE;
+                },
             }
-            return ExitCode::FAILURE;
-        },
+        } else {
+            match Parser::lr(grammar) {
+                Ok(parser) => parser,
+                Err(error) => {
+                    eprintln!("{} {}", "lalr parser error:".red().bold(), error);
+                    if let ParserError::Conflict { parser, .. } = error {
+                        parser.dump();
+                    }
+                    return ExitCode::FAILURE;
+                },
+            }
+        }
     };
 
     println!();
     parser.dump();
     println!();
 
-    match args.next() {
+    match args.input {
         Some(input) => {
             println!("{} {}", ">".cyan().bold(), input);
             parse(&parser, &input)

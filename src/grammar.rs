@@ -200,7 +200,7 @@ impl Display for Rule {
 
 
 /// Grammar of a language.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Grammar {
     symbols: IndexSet<Symbol>,
     start_symbol: Symbol,

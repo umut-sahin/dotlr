@@ -18,7 +18,7 @@ fn main() -> ExitCode {
 
     let grammar_string = include_str!("../assets/grammars/correct/calculator.lr");
     let grammar = Grammar::parse(grammar_string).expect("invalid grammar");
-    let parser = Parser::new(grammar).expect("unsupported grammar");
+    let parser = Parser::lr(grammar).expect("unsupported grammar");
 
     match args.next() {
         Some(input) => calculate(&parser, &input),
