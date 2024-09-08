@@ -11,7 +11,7 @@
   <hr/>
 
   <div>
-    <img src="https://raw.githubusercontent.com/umut-sahin/dotlr/main/assets/docs/demo.gif" />
+    <img src="https://raw.githubusercontent.com/umut-sahin/dotlr/main/assets/docs/demo.png" />
   </div>
 
 </div>
@@ -20,7 +20,7 @@
 
 * [What is an LR(1) parser?](#what-is-an-lr1-parser)
 * [Why did you make this?](#why-did-you-make-this)
-* [How can I use the CLI in the gif?](#how-can-i-use-the-cli-in-the-gif)
+* [How can I use the CLI in the picture?](#how-can-i-use-the-cli-in-the-picture)
 * [Can I use it as a standalone library?](#can-i-use-it-as-a-standalone-library)
 * [How it works?](#how-does-it-work)
   * [1) Parsing the grammar](#1-parsing-the-grammar)
@@ -52,7 +52,7 @@ including most programming languages!
 To learn and to help others learn! This project allows you to visualize LR(1) parsers, from
 construction to parsing, which makes it easier to understand how they work.
 
-## How can I use the CLI in the gif?
+## How can I use the CLI in the picture?
 
 If you want to play around with `dotlr` to visualize parser construction and step-by-step parsing of
 different grammars, you can use the main executable of the crate.
