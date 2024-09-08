@@ -1,0 +1,10 @@
+Conditional -> 'if' Expression '{' Expression '}'
+Conditional -> 'if' Expression '{' Expression '}' 'else' '{' Expression '}'
+
+Expression -> 'true'
+Expression -> 'false'
+Expression -> Identifier
+
+Identifier -> %identifier
+
+%identifier -> /[a-zA-Z_][a-zA-Z0-9_]*/
