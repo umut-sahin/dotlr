@@ -3,10 +3,12 @@ pub mod grammars {
     // ----------------
     // Correct grammars
     // ----------------
-    pub const CORRECT: &[&str] = &[BINARY_ADDITION, CALCULATOR, G10, G11, JSON, NOT_LALR];
+    pub const CORRECT: &[&str] =
+        &[BINARY_ADDITION, CALCULATOR, CONDITIONAL, G10, G11, JSON, NOT_LALR];
 
     pub const BINARY_ADDITION: &str = include_str!("../assets/grammars/correct/binary-addition.lr");
     pub const CALCULATOR: &str = include_str!("../assets/grammars/correct/calculator.lr");
+    pub const CONDITIONAL: &str = include_str!("../assets/grammars/correct/conditional.lr");
     pub const G10: &str = include_str!("../assets/grammars/correct/g10.lr");
     pub const G11: &str = include_str!("../assets/grammars/correct/g11.lr");
     pub const JSON: &str = include_str!("../assets/grammars/correct/json.lr");

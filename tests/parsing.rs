@@ -164,3 +164,37 @@ Expr
         );
     }
 }
+
+#[test]
+fn correctly_parse_conditional_grammar() {
+    let grammar = Grammar::parse(common::grammars::CONDITIONAL).unwrap();
+    let parser = Parser::new(grammar).unwrap();
+
+    let expression = "if true { if_case } else { else_case }";
+    let tokens = parser.tokenize(expression).unwrap();
+
+    let parse_tree = parser.parse(tokens).unwrap();
+    assert_eq!(
+        parse_tree.to_string().trim(),
+        r#"
+
+Conditional
+├─ if
+├─ Expression
+│  └─ true
+├─ {
+├─ Expression
+│  └─ Identifier
+│     └─ if_case
+├─ }
+├─ else
+├─ {
+├─ Expression
+│  └─ Identifier
+│     └─ else_case
+└─ } 
+
+            "#
+        .trim(),
+    );
+}

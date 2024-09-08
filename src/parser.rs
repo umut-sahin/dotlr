@@ -111,32 +111,33 @@ impl Parser {
 
         let mut remaining_input = input.trim_start();
         while !remaining_input.is_empty() {
-            let mut matched = false;
-            for (regex_token, regex) in self.grammar.regular_expressions() {
-                if let Some(match_info) = regex.find(remaining_input) {
-                    matched = true;
-                    let slice = &remaining_input[..match_info.end()];
-                    tokens.push((Token::Regex(regex_token.clone()), slice));
-                    remaining_input = &remaining_input[match_info.end()..];
+            let mut matching_token = None;
+            let mut matching_slice = "";
+
+            for token in ordered_constant_tokens.iter().rev() {
+                if remaining_input.starts_with(token.as_str()) {
+                    matching_token = Some(Token::Constant((*token).clone()));
+                    matching_slice = &remaining_input[..token.len()];
+                    break;
                 }
             }
-            if !matched {
-                for token in ordered_constant_tokens.iter().rev() {
-                    if remaining_input.starts_with(token.as_str()) {
-                        matched = true;
-                        let slice = &remaining_input[..token.len()];
-                        tokens.push((Token::Constant((*token).clone()), slice));
-                        remaining_input = &remaining_input[token.len()..];
-                        break;
+            for (regex_token, regex) in self.grammar.regular_expressions() {
+                if let Some(match_info) = regex.find(remaining_input) {
+                    if match_info.len() > matching_slice.len() {
+                        matching_token = Some(Token::Regex(regex_token.clone()));
+                        matching_slice = &remaining_input[..match_info.end()];
                     }
                 }
             }
-            if !matched {
+
+            if matching_token.is_none() {
                 return Err(ParsingError::UnknownToken {
                     token: format_smolstr!("{}", remaining_input.chars().next().unwrap()),
                 });
             }
-            remaining_input = remaining_input.trim_start();
+
+            tokens.push((matching_token.unwrap(), matching_slice));
+            remaining_input = remaining_input[matching_slice.len()..].trim();
         }
         tokens.push((Token::Eof, "\0"));
 
