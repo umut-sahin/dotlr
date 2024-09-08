@@ -59,7 +59,7 @@ impl Display for Item {
 
 
 /// State of an LR(1) automaton.
-#[derive(Debug, Default, Eq)]
+#[derive(Clone, Debug, Default, Eq)]
 pub struct State {
     id: usize,
     items: SmallVec<[Item; 2]>,
@@ -251,6 +251,149 @@ impl Automaton {
         }
 
         Automaton { states: final_states }
+    }
+}
+
+impl Automaton {
+    /// Converts the LR(1) automaton into an LALR(1) automaton.
+    pub fn to_lalr(self) -> Automaton {
+        // We'll start by computing the states that share the same core.
+        // Core of a state is its items without the lookahead.
+        // In the end we want `state_groups` to be something like:
+        // [
+        //   { 0 },       -> New state 0 will be the copy of the original state 0
+        //   { 1 },       -> New state 1 will be the copy of the original state 1
+        //   { 2, 9 },    -> New state 2 will be the merge of the original states 2 and 9
+        //   { 3, 6 },    -> New state 3 will be the merge of the original states 3 and 6
+        //   { 4, 7 },    -> New state 4 will be the merge of the original states 4 and 7
+        //   { 5, 8 },    -> New state 5 will be the merge of the original states 5 and 8
+        //   { 10, 13 },  -> New state 6 will be the merge of the original states 10 and 13
+        //   { 11, 14 },  -> New state 7 will be the merge of the original states 11 and 14
+        //   { 12, 15 },  -> New state 8 will be the merge of the original states 12 and 15
+        // ]
+        let mut state_groups = Vec::<IndexSet<usize>>::new();
+        for (state_index, state) in self.states.iter().enumerate() {
+            let mut group = None;
+            for state_group in state_groups.iter_mut() {
+                assert!(!state_group.is_empty());
+
+                let candidate_index = state_group.iter().next().unwrap();
+                let candidate_state = &self.states[*candidate_index];
+
+                if state.items.len() == candidate_state.items.len() {
+                    let mut can_be_merged = true;
+                    for item in state.items.iter() {
+                        let mut candidate_state_has_same_item_without_lookahead = false;
+                        for candidate_item in candidate_state.items.iter() {
+                            if item.dot == candidate_item.dot && item.rule == candidate_item.rule {
+                                candidate_state_has_same_item_without_lookahead = true;
+                                break;
+                            }
+                        }
+                        if !candidate_state_has_same_item_without_lookahead {
+                            can_be_merged = false;
+                            break;
+                        }
+                    }
+                    if can_be_merged {
+                        group = Some(state_group);
+                    }
+                }
+            }
+            match group {
+                Some(group) => {
+                    group.insert(state_index);
+                },
+                None => {
+                    state_groups.push(IndexSet::from([state_index]));
+                },
+            }
+        }
+
+        // Now we'll compute the mapping from the old states to the new states.
+        // In the end we want `state_map` to be something like:
+        // {
+        //      0: 0,  -> Original state  0 will become the new state 0
+        //      1: 1,  -> Original state  1 will become the new state 1
+        //      2: 2,  -> Original state  2 will become the new state 2
+        //      3: 3,  -> Original state  3 will become the new state 3
+        //      4: 4,  -> Original state  4 will become the new state 4
+        //      5: 5,  -> Original state  5 will become the new state 5
+        //      6: 3,  -> Original state  6 will become the new state 3
+        //      7: 4,  -> Original state  7 will become the new state 4
+        //      8: 5,  -> Original state  8 will become the new state 5
+        //      9: 2,  -> Original state  9 will become the new state 2
+        //     10: 6,  -> Original state 10 will become the new state 6
+        //     11: 7,  -> Original state 11 will become the new state 7
+        //     12: 8,  -> Original state 12 will become the new state 8
+        //     13: 6,  -> Original state 13 will become the new state 6
+        //     14: 7,  -> Original state 14 will become the new state 7
+        //     15: 8,  -> Original state 15 will become the new state 8
+        // }
+        let mut state_map = BTreeMap::<usize, usize>::new();
+        for (new_state_index, state_group) in state_groups.iter().enumerate() {
+            for old_state_index in state_group.iter().copied() {
+                state_map.insert(old_state_index, new_state_index);
+            }
+        }
+
+        // Finally, we compute the new states.
+        let mut new_states = Vec::<State>::with_capacity(state_groups.len());
+        for (id, state_group) in state_groups.into_iter().enumerate() {
+            // We'll create a new state for each group in `state_groups`.
+
+            // We make sure that the group is not empty, which shouldn't happen.
+            assert!(!state_group.is_empty());
+
+            // Get an iterator of the indices of the states to merge.
+            let mut state_indices = state_group.into_iter();
+
+            // Create the new state from the first original state.
+            let mut new_state = self.states[state_indices.next().unwrap()].clone();
+
+            // Set the id of the state to the index of the group.
+            new_state.id = id;
+
+            // Update the transitions of the new state according to `state_map`.
+            for next_state in new_state.transitions.values_mut() {
+                *next_state = state_map[next_state];
+            }
+
+            // Merge the new state with other states in the group.
+            for state_index in state_indices {
+                // Get the state to merge.
+                let state_to_merge = &self.states[state_index];
+
+                // Make sure the state is merged into the correct state.
+                assert_eq!(state_map[&state_to_merge.id], id);
+
+                // Make sure the transitions of the state are the same as the new state.
+                for (atomic_pattern, next_state) in state_to_merge.transitions.iter() {
+                    assert!(new_state.transitions.contains_key(atomic_pattern));
+                    assert_eq!(new_state.transitions[atomic_pattern], state_map[next_state])
+                }
+
+                // Extend the lookahead of the items of the new state.
+                for item in state_to_merge.items.iter() {
+                    let mut merged = false;
+                    for new_item in new_state.items.iter_mut() {
+                        if new_item.dot == item.dot && new_item.rule == item.rule {
+                            new_item.lookahead.extend(item.lookahead.iter().cloned());
+                            merged = true;
+                            break;
+                        }
+                    }
+                    // Make sure the item existed in both states.
+                    assert!(merged);
+                }
+            }
+
+            // Add the merged state to the new states.
+            new_states.push(new_state);
+        }
+
+        // Crate the LALR(1) automaton using the new states.
+        Automaton { states: new_states }
     }
 }
 

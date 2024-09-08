@@ -10,7 +10,7 @@ use dotlr::{
 #[test]
 fn raising_correct_error_when_encountering_unknown_token_during_parsing_calculator_grammar() {
     let grammar = Grammar::parse(common::grammars::CALCULATOR).unwrap();
-    let parser = Parser::new(grammar).unwrap();
+    let parser = Parser::lr(grammar).unwrap();
 
     let error = parser.tokenize("a").unwrap_err();
     assert_eq!(error.to_string(), "unknown token a");
@@ -19,7 +19,7 @@ fn raising_correct_error_when_encountering_unknown_token_during_parsing_calculat
 #[test]
 fn raising_correct_error_when_encountering_unexpected_token_during_parsing_calculator_grammar() {
     let grammar = Grammar::parse(common::grammars::CALCULATOR).unwrap();
-    let parser = Parser::new(grammar).unwrap();
+    let parser = Parser::lr(grammar).unwrap();
     let tokens = parser.tokenize("1 + /").unwrap();
 
     let error = parser.parse(tokens).unwrap_err();
@@ -29,7 +29,7 @@ fn raising_correct_error_when_encountering_unexpected_token_during_parsing_calcu
 #[test]
 fn raising_correct_error_when_encountering_unexpected_eof_during_parsing_calculator_grammar() {
     let grammar = Grammar::parse(common::grammars::CALCULATOR).unwrap();
-    let parser = Parser::new(grammar).unwrap();
+    let parser = Parser::lr(grammar).unwrap();
     let tokens = parser.tokenize("1 + (2").unwrap();
 
     let error = parser.parse(tokens).unwrap_err();
@@ -43,7 +43,7 @@ fn raising_correct_error_when_encountering_unexpected_eof_during_parsing_calcula
 #[test]
 fn correctly_trace_parsing_of_calculator_grammar() {
     let grammar = Grammar::parse(common::grammars::CALCULATOR).unwrap();
-    let parser = Parser::new(grammar).unwrap();
+    let parser = Parser::lr(grammar).unwrap();
 
     let expression = "1 + 2 * 3 / (4 ^ 5)";
     let tokens = parser.tokenize(expression).unwrap();
@@ -166,9 +166,9 @@ Expr
 }
 
 #[test]
-fn correctly_parse_conditional_grammar() {
+fn correctly_parsing_conditional_grammar() {
     let grammar = Grammar::parse(common::grammars::CONDITIONAL).unwrap();
-    let parser = Parser::new(grammar).unwrap();
+    let parser = Parser::lr(grammar).unwrap();
 
     let expression = "if true { if_case } else { else_case }";
     let tokens = parser.tokenize(expression).unwrap();
@@ -193,6 +193,108 @@ Conditional
 │  └─ Identifier
 │     └─ else_case
 └─ } 
+
+            "#
+        .trim(),
+    );
+}
+
+#[test]
+fn correctly_parsing_json_grammar_with_lalr() {
+    let grammar = Grammar::parse(common::grammars::JSON).unwrap();
+    let parser = Parser::lalr(grammar).unwrap();
+
+    let expression = include_str!("../assets/data/sample.json");
+    let tokens = parser.tokenize(expression).unwrap();
+
+    let parse_tree = parser.parse(tokens).unwrap();
+    assert_eq!(
+        parse_tree.to_string().trim(),
+        r#"
+
+Json
+└─ Value
+   └─ Object
+      ├─ {
+      ├─ ObjectElements
+      │  ├─ ObjectElements
+      │  │  ├─ ObjectElements
+      │  │  │  ├─ ObjectElements
+      │  │  │  │  ├─ ObjectElements
+      │  │  │  │  │  ├─ ObjectElements
+      │  │  │  │  │  │  ├─ String
+      │  │  │  │  │  │  │  └─ "name"
+      │  │  │  │  │  │  ├─ :
+      │  │  │  │  │  │  └─ Value
+      │  │  │  │  │  │     └─ String
+      │  │  │  │  │  │        └─ "Sample"
+      │  │  │  │  │  ├─ ,
+      │  │  │  │  │  ├─ String
+      │  │  │  │  │  │  └─ "rating"
+      │  │  │  │  │  ├─ :
+      │  │  │  │  │  └─ Value
+      │  │  │  │  │     └─ Number
+      │  │  │  │  │        └─ 4.2
+      │  │  │  │  ├─ ,
+      │  │  │  │  ├─ String
+      │  │  │  │  │  └─ "homepage"
+      │  │  │  │  ├─ :
+      │  │  │  │  └─ Value
+      │  │  │  │     └─ Null
+      │  │  │  │        └─ null
+      │  │  │  ├─ ,
+      │  │  │  ├─ String
+      │  │  │  │  └─ "is_active"
+      │  │  │  ├─ :
+      │  │  │  └─ Value
+      │  │  │     └─ Boolean
+      │  │  │        └─ true
+      │  │  ├─ ,
+      │  │  ├─ String
+      │  │  │  └─ "tags"
+      │  │  ├─ :
+      │  │  └─ Value
+      │  │     └─ Array
+      │  │        ├─ [
+      │  │        ├─ ArrayElements
+      │  │        │  ├─ ArrayElements
+      │  │        │  │  ├─ ArrayElements
+      │  │        │  │  │  └─ Value
+      │  │        │  │  │     └─ String
+      │  │        │  │  │        └─ "a"
+      │  │        │  │  ├─ ,
+      │  │        │  │  └─ Value
+      │  │        │  │     └─ String
+      │  │        │  │        └─ "b"
+      │  │        │  ├─ ,
+      │  │        │  └─ Value
+      │  │        │     └─ String
+      │  │        │        └─ "c"
+      │  │        └─ ]
+      │  ├─ ,
+      │  ├─ String
+      │  │  └─ "metadata"
+      │  ├─ :
+      │  └─ Value
+      │     └─ Object
+      │        ├─ {
+      │        ├─ ObjectElements
+      │        │  ├─ ObjectElements
+      │        │  │  ├─ String
+      │        │  │  │  └─ "foo"
+      │        │  │  ├─ :
+      │        │  │  └─ Value
+      │        │  │     └─ String
+      │        │  │        └─ "bar"
+      │        │  ├─ ,
+      │        │  ├─ String
+      │        │  │  └─ "bar"
+      │        │  ├─ :
+      │        │  └─ Value
+      │        │     └─ Number
+      │        │        └─ 10
+      │        └─ }
+      └─ }
 
             "#
         .trim(),
