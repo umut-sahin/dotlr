@@ -2,7 +2,7 @@
 name = "dotlr"
 description = "An LR(1) parser generator and visualizer created for educational purposes."
 categories = ["algorithms", "parsing"]
-keywords = ["educational", "lr-parsing", "parser-generator"]
+keywords = ["educational", "lalr-parsing", "lr-parsing", "parser-generator"]
 version = "0.2.0"
 edition = "2021"
 license = "MIT OR Apache-2.0"
