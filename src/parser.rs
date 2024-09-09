@@ -281,7 +281,22 @@ impl Parser {
             let mut pretty_grammar = Table::new();
 
             pretty_grammar.add_row(row![cbFy->"Grammar"]);
-            pretty_grammar.add_row(row![self.grammar]);
+            {
+                let mut pretty_rules = Table::new();
+                pretty_rules.set_format(*prettytable::format::consts::FORMAT_CLEAN);
+
+                for (rule_index, rule) in self.grammar.rules().iter().enumerate() {
+                    pretty_rules.add_row(row![r->format!("{})", rule_index + 1), rule]);
+                }
+                if !self.grammar.regular_expressions().is_empty() {
+                    pretty_rules.add_row(row![r->"", ""]);
+                }
+                for (regex_token, regex) in self.grammar.regular_expressions().iter() {
+                    pretty_rules.add_row(row![r->"", format!("{} -> /{}/", regex_token, regex)]);
+                }
+
+                pretty_grammar.add_row(row![pretty_rules]);
+            }
 
             pretty_grammar.printstd();
         }
