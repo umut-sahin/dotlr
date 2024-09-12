@@ -88,11 +88,11 @@ jobs:
         with:
           command: test
 
-  publish:
+  publish-crates-io:
     if: startsWith(github.ref, 'refs/tags/v')
     needs: [ conformance, test ]
 
-    name: Publish
+    name: Publish to Crates.io
     runs-on: "ubuntu-latest"
     steps:
       - name: Checkout
@@ -109,3 +109,39 @@ jobs:
         run: cargo publish --token ${REGISTRY_TOKEN}
         env:
           REGISTRY_TOKEN: ${{ secrets.REGISTRY_TOKEN }}
+
+  publish-npm:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [ conformance, test ]
+
+    name: Publish to NPM
+    runs-on: "ubuntu-latest"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Setup Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: nightly
+          override: true
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+
+      - name: Cd in to the node bindings
+        run: cd bindings/typescript
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Build
+        run: npm run build
+
+      - name: Publish
+        run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

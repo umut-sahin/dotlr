@@ -3,6 +3,8 @@ use crate::prelude::*;
 
 /// Step of a parsing trace.
 #[derive(Debug)]
+#[cfg_attr(feature = "serde", derive(Serialize))]
+#[cfg_attr(feature = "serde", serde(crate = "serde_renamed"))]
 pub struct Step<'i> {
     pub(crate) state_stack: Vec<usize>,
     pub(crate) tree_stack: Vec<Tree<'i>>,
@@ -35,6 +37,8 @@ impl<'i> Step<'i> {
 
 /// Trace of a parse.
 #[derive(Debug, Default)]
+#[cfg_attr(feature = "serde", derive(Serialize))]
+#[cfg_attr(feature = "serde", serde(crate = "serde_renamed"))]
 pub struct Trace<'i> {
     steps: Vec<Step<'i>>,
 }

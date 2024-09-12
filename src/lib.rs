@@ -7,6 +7,7 @@ mod parser;
 mod tables;
 mod trace;
 mod tree;
+mod utils;
 
 pub use {
     automaton::{
@@ -43,9 +44,23 @@ pub use {
 };
 
 mod prelude {
+    #[cfg(feature = "serde")]
+    pub use {
+        serde_renamed::Serialize,
+        utils::serialize_regex_map,
+    };
+
+
+    #[cfg(feature = "wasm")]
+    pub use wasm_bindgen::prelude::*;
+
+    #[cfg(not(target_family = "wasm"))]
+    pub use colored::*;
+    #[cfg(target_family = "wasm")]
+    pub use utils::MockColored;
+
     pub use {
         super::*,
-        colored::Colorize,
         indexmap::{
             IndexMap,
             IndexSet,
@@ -56,6 +71,8 @@ mod prelude {
             Logos,
         },
         prettytable::{
+            Row,
+            Table,
             cell,
             format::{
                 FormatBuilder,
@@ -63,18 +80,16 @@ mod prelude {
                 LineSeparator,
             },
             row,
-            Row,
-            Table,
         },
         ptree::TreeBuilder,
         regex::Regex,
         smallvec::{
-            smallvec,
             SmallVec,
+            smallvec,
         },
         smol_str::{
-            format_smolstr,
             SmolStr,
+            format_smolstr,
         },
         std::{
             self,
@@ -87,5 +102,10 @@ mod prelude {
             ops::Deref,
         },
         thiserror::Error,
+    };
+    #[cfg(feature = "serde")]
+    pub use {
+        serde_renamed::Serializer,
+        serde_renamed::ser::SerializeMap,
     };
 }

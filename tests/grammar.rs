@@ -69,17 +69,15 @@ Term -> %f
         .trim(),
     );
 
-    assert_eq!(
-        grammar.symbols().iter().map(|symbol| symbol.as_str()).collect::<Vec<_>>(),
-        ["Expr", "Factor", "Exponent", "Term"],
-    );
+    assert_eq!(grammar.symbols().iter().map(|symbol| symbol.as_str()).collect::<Vec<_>>(), [
+        "Expr", "Factor", "Exponent", "Term"
+    ],);
 
     assert_eq!(grammar.start_symbol().as_str(), "Expr");
 
-    assert_eq!(
-        grammar.constant_tokens().iter().map(|token| token.as_str()).collect::<Vec<_>>(),
-        ["+", "-", "*", "/", "^", "(", ")"],
-    );
+    assert_eq!(grammar.constant_tokens().iter().map(|token| token.as_str()).collect::<Vec<_>>(), [
+        "+", "-", "*", "/", "^", "(", ")"
+    ],);
 
     assert_eq!(
         grammar.regular_expressions().keys().map(|token| token.as_str()).collect::<Vec<_>>(),

@@ -2,6 +2,9 @@ use crate::prelude::*;
 
 
 /// First table of the symbols in a grammar.
+#[cfg_attr(feature = "wasm", wasm_bindgen)]
+#[cfg_attr(feature = "serde", derive(Serialize))]
+#[cfg_attr(feature = "serde", serde(crate = "serde_renamed"))]
 #[derive(Debug)]
 pub struct FirstTable(IndexMap<Symbol, IndexSet<Token>>);
 
@@ -72,6 +75,9 @@ impl Deref for FirstTable {
 
 
 /// Follow table of the symbols in a grammar.
+#[cfg_attr(feature = "wasm", wasm_bindgen)]
+#[cfg_attr(feature = "serde", derive(Serialize))]
+#[cfg_attr(feature = "serde", serde(crate = "serde_renamed"))]
 #[derive(Debug)]
 pub struct FollowTable(IndexMap<Symbol, IndexSet<Token>>);
 
@@ -173,6 +179,9 @@ impl Deref for FollowTable {
 
 
 /// Action (e.g., `Shift 3`, `Reduce 2`, `Accept 1`) to perform during a parsing step.
+#[cfg_attr(feature = "serde", derive(Serialize))]
+#[cfg_attr(feature = "serde", serde(crate = "serde_renamed"))]
+#[cfg_attr(feature = "serde", serde(tag = "type", content = "value"))]
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum Action {
     /// Shift the first remaining input token into symbol stack and transition to a new state.
@@ -204,6 +213,9 @@ impl Display for Action {
 
 
 /// Action and goto tables of a parser.
+#[cfg_attr(feature = "wasm", wasm_bindgen)]
+#[cfg_attr(feature = "serde", derive(Serialize))]
+#[cfg_attr(feature = "serde", serde(crate = "serde_renamed"))]
 #[derive(Debug)]
 pub struct ParsingTables {
     action_table: Vec<IndexMap<Token, IndexSet<Action>>>,

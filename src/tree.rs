@@ -3,8 +3,10 @@ use {
     std::io::BufWriter,
 };
 
-
 /// Parse tree of a parsed input.
+#[cfg_attr(feature = "serde", derive(Serialize))]
+#[cfg_attr(feature = "serde", serde(crate = "serde_renamed"))]
+#[cfg_attr(feature = "serde", serde(tag = "type", content = "value"))]
 #[derive(Clone, Debug)]
 pub enum Tree<'i> {
     /// Terminal node.
