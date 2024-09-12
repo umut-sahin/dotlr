@@ -1,9 +1,9 @@
 use {
     criterion::{
-        criterion_group,
         BatchSize,
         Criterion,
         Throughput,
+        criterion_group,
     },
     dotlr::{
         Grammar,

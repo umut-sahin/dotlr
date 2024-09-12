@@ -1,0 +1,35 @@
+{
+  "type": "module",
+  "name": "dotlr",
+  "description": "An LR(1) parser generator and visualizer created for educational purposes.",
+  "keywords": [
+    "educational",
+    "lalr-parsing",
+    "lr-parsing",
+    "parser-generator"
+  ],
+  "license": "MIT OR Apache-2.0",
+  "version": "0.1.18",
+  "main": "dist/index.js",
+  "exports": {
+    ".": "./dist/index.js",
+    "./types": "./dist/types.js",
+    "./utils": "./dist/utils.js"
+  },
+  "module": "dist/index.js",
+  "typings": "dist/index.d.ts",
+  "repository": "https://github.com/umut-sahin/dotlr",
+  "scripts": {
+    "build": "npm i -g wasm-pack && npm run build-all",
+    "build-all": "npm run build-wasm:no-test && npm run build-lib",
+    "build-wasm": "cd .. && cargo test && wasm-pack build --out-dir bindings/typescript/src/pkg --out-name dotlr --features wasm --no-default-features",
+    "build-wasm:no-test": "cd .. && wasm-pack build --out-dir bindings/typescript/src/pkg --out-name dotlr --features wasm --no-default-features",
+    "build-lib": "node build.js"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0"
+  },
+  "dependencies": {
+    "ts-results": "^3.3.0"
+  }
+}

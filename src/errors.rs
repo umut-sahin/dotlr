@@ -2,6 +2,9 @@ use crate::prelude::*;
 
 
 /// Grammar error of a grammar string tried to be converted to a grammar.
+#[cfg_attr(feature = "serde", derive(Serialize))]
+#[cfg_attr(feature = "serde", serde(crate = "serde_renamed"))]
+#[cfg_attr(feature = "serde", serde(tag = "type", content = "value"))]
 #[derive(Debug, Error)]
 pub enum GrammarError {
     /// An unexpected token has been encountered.
@@ -47,6 +50,9 @@ pub enum GrammarError {
 
 
 /// Parser error of a parser tried to be constructed from a grammar.
+#[cfg_attr(feature = "serde", derive(Serialize))]
+#[cfg_attr(feature = "serde", serde(crate = "serde_renamed"))]
+#[cfg_attr(feature = "serde", serde(tag = "type", content = "value"))]
 #[derive(Debug, Error)]
 pub enum ParserError {
     /// An empty grammar is tried to be parsed.
@@ -80,6 +86,9 @@ pub enum ParserError {
 
 
 /// Parsing error of an input tried to be parsed with a parser.
+#[cfg_attr(feature = "serde", derive(Serialize))]
+#[cfg_attr(feature = "serde", serde(crate = "serde_renamed"))]
+#[cfg_attr(feature = "serde", serde(tag = "type", content = "value"))]
 #[derive(Debug, Error)]
 pub enum ParsingError {
     /// An unknown token has been encountered.

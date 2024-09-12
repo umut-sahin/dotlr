@@ -7,8 +7,8 @@ use {
         ParserError,
     },
     rustyline::{
-        error::ReadlineError,
         DefaultEditor,
+        error::ReadlineError,
     },
     std::{
         path::PathBuf,

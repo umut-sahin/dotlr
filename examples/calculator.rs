@@ -7,8 +7,8 @@ use {
         Tree,
     },
     rustyline::{
-        error::ReadlineError,
         DefaultEditor,
+        error::ReadlineError,
     },
     std::process::ExitCode,
 };

@@ -2,6 +2,8 @@ use crate::prelude::*;
 
 
 /// Symbol (e.g., `S`, `E`) in a grammar.
+#[cfg_attr(feature = "serde", derive(Serialize))]
+#[cfg_attr(feature = "serde", serde(crate = "serde_renamed"))]
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct Symbol(SmolStr);
 
@@ -27,6 +29,8 @@ impl<T: Into<SmolStr>> From<T> for Symbol {
 
 
 /// Constant token (e.g., `'+'`, `'-'`) in a grammar.
+#[cfg_attr(feature = "serde", derive(Serialize))]
+#[cfg_attr(feature = "serde", serde(crate = "serde_renamed"))]
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct ConstantToken(SmolStr);
 
@@ -52,6 +56,8 @@ impl<T: Into<SmolStr>> From<T> for ConstantToken {
 
 
 /// Regular expression token (e.g., `%f`, `%s`) in a grammar.
+#[cfg_attr(feature = "serde", derive(Serialize))]
+#[cfg_attr(feature = "serde", serde(crate = "serde_renamed"))]
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct RegexToken(SmolStr);
 
@@ -77,6 +83,9 @@ impl<T: Into<SmolStr>> From<T> for RegexToken {
 
 
 /// Token (e.g., `'+'`, `%f`, `$`) in a grammar.
+#[cfg_attr(feature = "serde", derive(Serialize))]
+#[cfg_attr(feature = "serde", serde(crate = "serde_renamed"))]
+#[cfg_attr(feature = "serde", serde(tag = "type", content = "value"))]
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum Token {
     /// Constant token.
@@ -117,6 +126,9 @@ impl From<RegexToken> for Token {
 
 
 /// Elements (e.g., `E`, `'+'`, `%f`) of the pattern of a rule.
+#[cfg_attr(feature = "serde", derive(Serialize))]
+#[cfg_attr(feature = "serde", serde(crate = "serde_renamed"))]
+#[cfg_attr(feature = "serde", serde(tag = "type", content = "value"))]
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum AtomicPattern {
     /// Symbol to match.
@@ -160,6 +172,8 @@ impl From<RegexToken> for AtomicPattern {
 
 
 /// Rule (e.g., `S -> E` `E -> F '+' E`) of a grammar.
+#[cfg_attr(feature = "serde", derive(Serialize))]
+#[cfg_attr(feature = "serde", serde(crate = "serde_renamed"))]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Rule {
     symbol: Symbol,
@@ -200,14 +214,19 @@ impl Display for Rule {
 
 
 /// Grammar of a language.
+#[cfg_attr(feature = "wasm", wasm_bindgen)]
+#[cfg_attr(feature = "serde", derive(Serialize))]
+#[cfg_attr(feature = "serde", serde(crate = "serde_renamed"))]
 #[derive(Clone, Debug)]
 pub struct Grammar {
     symbols: IndexSet<Symbol>,
     start_symbol: Symbol,
     constant_tokens: IndexSet<ConstantToken>,
+    #[cfg_attr(feature = "serde", serde(serialize_with = "serialize_regex_map"))]
     regular_expressions: IndexMap<RegexToken, Regex>,
     rules: Vec<Rule>,
 }
+
 
 impl Grammar {
     /// Creates a grammar from a grammar string.
@@ -215,6 +234,18 @@ impl Grammar {
         grammar_parser::parse(grammar_string)
     }
 }
+
+#[cfg(feature = "wasm")]
+#[cfg_attr(feature = "wasm", wasm_bindgen)]
+impl Grammar {
+    pub fn parse_wasm(grammar_string: &str) -> Result<Grammar, JsValue> {
+        match Grammar::parse(grammar_string) {
+            Ok(grammar) => Ok(grammar),
+            Err(error) => Err(serde_wasm_bindgen::to_value(&error)?),
+        }
+    }
+}
+
 
 impl Grammar {
     /// Gets the symbols of the grammar.
@@ -242,6 +273,36 @@ impl Grammar {
         &self.rules
     }
 }
+
+#[cfg(feature = "wasm")]
+#[cfg_attr(feature = "wasm", wasm_bindgen)]
+impl Grammar {
+    pub fn symbols_wasm(&self) -> Result<JsValue, JsValue> {
+        Ok(serde_wasm_bindgen::to_value(&self.symbols)?)
+    }
+    pub fn start_symbol_wasm(&self) -> Result<JsValue, JsValue> {
+        Ok(serde_wasm_bindgen::to_value(&self.start_symbol)?)
+    }
+    pub fn rules_wasm(&self) -> Result<JsValue, JsValue> {
+        Ok(serde_wasm_bindgen::to_value(&self.rules)?)
+    }
+    pub fn to_string_wasm(&self) -> String {
+        self.to_string()
+    }
+    pub fn constant_tokens_wasm(&self) -> Result<JsValue, JsValue> {
+        Ok(serde_wasm_bindgen::to_value(&self.constant_tokens)?)
+    }
+
+    pub fn regular_expressions_wasm(&self) -> Result<JsValue, JsValue> {
+        let index_map: IndexMap<RegexToken, String> =
+            self.regular_expressions.iter().map(|(k, v)| (k.clone(), v.to_string())).collect();
+        Ok(serde_wasm_bindgen::to_value(&index_map)?)
+    }
+    pub fn clone_wasm(&self) -> Grammar {
+        self.clone()
+    }
+}
+
 
 impl Display for Grammar {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
