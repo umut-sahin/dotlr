@@ -9,7 +9,7 @@
     "parser-generator"
   ],
   "license": "MIT OR Apache-2.0",
-  "version": "0.1.18",
+  "version": "0.3.0",
   "main": "dist/index.js",
   "exports": {
     ".": "./dist/index.js",
