@@ -24,12 +24,21 @@
     "build-all": "npm run build-wasm:no-test && npm run build-lib",
     "build-wasm": "cd .. && cargo test && wasm-pack build --out-dir bindings/typescript/src/pkg --out-name dotlr --features wasm --no-default-features",
     "build-wasm:no-test": "cd .. && wasm-pack build --out-dir bindings/typescript/src/pkg --out-name dotlr --features wasm --no-default-features",
-    "build-lib": "node build.js"
+    "build-lib": "node build.js",
+    "lint": "npx eslint .",
+    "format": "npx prettier . --write",
+    "format:check": "npx prettier . --check"
   },
   "devDependencies": {
-    "typescript": "^5.5.0"
+    "@eslint/js": "^9.12.0",
+    "@types/node": "^22.7.5",
+    "eslint": "^9.12.0",
+    "prettier": "3.3.3",
+    "tsx": "^4.19.1",
+    "typescript": "^5.6.0",
+    "typescript-eslint": "^8.8.1"
   },
   "dependencies": {
-    "ts-results": "^3.3.0"
+    "ts-results-es": "^4.2.0"
   }
 }

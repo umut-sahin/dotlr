@@ -222,7 +222,7 @@ pub struct Grammar {
     symbols: IndexSet<Symbol>,
     start_symbol: Symbol,
     constant_tokens: IndexSet<ConstantToken>,
-    #[cfg_attr(feature = "serde", serde(serialize_with = "serialize_regex_map"))]
+    #[cfg_attr(feature = "serde", serde(serialize_with = "utils::serialize_regex_map"))]
     regular_expressions: IndexMap<RegexToken, Regex>,
     rules: Vec<Rule>,
 }

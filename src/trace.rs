@@ -8,7 +8,7 @@ use crate::prelude::*;
 pub struct Step<'i> {
     pub(crate) state_stack: Vec<usize>,
     pub(crate) tree_stack: Vec<Tree<'i>>,
-    pub(crate) remaining_tokens: Vec<Token>,
+    pub(crate) remaining_tokens: Vec<Spanned<Token>>,
     pub(crate) action_taken: Action,
 }
 
@@ -24,7 +24,7 @@ impl<'i> Step<'i> {
     }
 
     /// Gets the remaining tokens during the step.
-    pub fn remaining_tokens(&self) -> &[Token] {
+    pub fn remaining_tokens(&self) -> &[Spanned<Token>] {
         &self.remaining_tokens
     }
 
@@ -43,7 +43,7 @@ pub struct Trace<'i> {
     steps: Vec<Step<'i>>,
 }
 
-impl<'i> Trace<'i> {
+impl Trace<'_> {
     /// Creates a new trace.
     pub fn new() -> Self {
         Self { steps: vec![] }
@@ -64,7 +64,7 @@ impl<'i> Trace<'i> {
     }
 }
 
-impl<'i> Trace<'i> {
+impl Trace<'_> {
     /// Dumps the trace to stdout.
     pub fn dump(&self, grammar: &Grammar) {
         let mut pretty_trace_table = Table::new();
@@ -91,7 +91,7 @@ impl<'i> Trace<'i> {
                     }
                 })
                 .join(" ");
-            let remaining_input = step.remaining_tokens.iter().rev().join(" ");
+            let remaining_input = step.remaining_tokens.iter().rev().map(|t| t.value()).join(" ");
             let action_taken = match step.action_taken {
                 Action::Shift { next_state } => {
                     format!("Shift {}", next_state)

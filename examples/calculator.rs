@@ -84,7 +84,7 @@ fn calculate(parser: &Parser, input: &str) -> ExitCode {
 
 fn evaluate(tree: Tree<'_>) -> f64 {
     match tree {
-        Tree::Terminal { token, slice } => {
+        Tree::Terminal { token, slice, .. } => {
             match token {
                 Token::Regex(regex_token) => {
                     match regex_token.as_str() {

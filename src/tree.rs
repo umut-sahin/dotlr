@@ -13,6 +13,8 @@ pub enum Tree<'i> {
     Terminal {
         /// Matching token.
         token: Token,
+        /// Matching span.
+        span: Span,
         /// Matching slice.
         slice: &'i str,
     },
@@ -24,15 +26,14 @@ pub enum Tree<'i> {
         pattern: Vec<Tree<'i>>,
     },
 }
-
-impl<'i> Tree<'i> {
+impl Tree<'_> {
     /// Dumps the parse tree to stdout.
     pub fn dump(&self) {
         println!("{}", self);
     }
 }
 
-impl<'i> Display for Tree<'i> {
+impl Display for Tree<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         fn display_name_of(tree: &Tree) -> String {
             match tree {

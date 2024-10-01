@@ -5,6 +5,7 @@
 It is focused on providing educational resources for learning about parsing algorithms and compiler construction. The library is designed to be easy to use and understand, making it ideal for students, educators, and developers interested in language processing.
 
 ### Table of Contents
+
 1. [Installation](#installation)
 2. [Basic Usage](#basic-usage)
 3. [Defining a Grammar](#defining-a-grammar)
@@ -16,7 +17,7 @@ It is focused on providing educational resources for learning about parsing algo
 Before using the `dotlr` library, you need to install it. The following instructions assume you have a project with `npm` already set up.
 
 ```bash
-npm install dotlr 
+npm install dotlr
 ```
 
 ### Importing the Library
@@ -24,12 +25,15 @@ npm install dotlr
 To use the `dotlr` library, import it into your TypeScript files:
 
 ```ts
-import { Grammar, LR1Parser, LALRParser } from 'dotlr';
+import { Grammar, LR1Parser, LALRParser } from "dotlr";
 ```
+
 this library uses `ts-results` under the hood to handle errors and results.
+
 ```ts
-import { Ok, Err } from 'ts-results';
+import { Ok, Err } from "ts-results-es";
 ```
+
 ## Basic Usage
 
 The core of the `dotlr` library revolves around defining a grammar and using it to create a parser. The following steps will guide you through this process.
@@ -50,12 +54,12 @@ const grammarStr = `
 const grammarResult = Grammar.parse(grammarStr);
 
 if (grammarResult.ok) {
-    const grammar = grammarResult.val;
-    console.log("Grammar successfully parsed!");
-    console.log(grammar.getSymbols());
-    console.log(grammar.getProductions());
+  const grammar = grammarResult.val;
+  console.log("Grammar successfully parsed!");
+  console.log(grammar.getSymbols());
+  console.log(grammar.getProductions());
 } else {
-    console.error("Failed to parse grammar:", grammarResult.val);
+  console.error("Failed to parse grammar:", grammarResult.val);
 }
 ```
 
@@ -71,24 +75,24 @@ The `LR1Parser` class allows you to create an LR(1) parser for the grammar and u
 const lr1ParserResult = LR1Parser.fromGrammar(grammar);
 
 if (lr1ParserResult.ok) {
-    const lr1Parser = lr1ParserResult.val;
+  const lr1Parser = lr1ParserResult.val;
 
-    const input = "aab";
-    const parseResult = lr1Parser.parse(input);
+  const input = "aab";
+  const parseResult = lr1Parser.parse(input);
 
-    if (parseResult.ok) {
-        const parseTree = parseResult.val;
-        console.log("Parse successful!");
-        console.log(parseTree);
-    } else {
-        console.error("Parse error:", parseResult.val);
-    }
+  if (parseResult.ok) {
+    const parseTree = parseResult.val;
+    console.log("Parse successful!");
+    console.log(parseTree);
+  } else {
+    console.error("Parse error:", parseResult.val);
+  }
 } else {
-    console.error("Failed to create LR(1) parser:", lr1ParserResult.val);
+  console.error("Failed to create LR(1) parser:", lr1ParserResult.val);
 }
 ```
 
-- **LR1Parser.fromGrammar()**: Consumes the `Grammar` object and returns an `LR1Parser`, you cannot reuse the *Grammar* object, if you need it, you can clone it by using `grammar.clone()`.
+- **LR1Parser.fromGrammar()**: Consumes the `Grammar` object and returns an `LR1Parser`, you cannot reuse the _Grammar_ object, if you need it, you can clone it by using `grammar.clone()`.
 - **parser.parse()**: method attempts to parse the given input string according to the LR(1) grammar. Returns a parse tree if successful.
 - **parser.trace()** method can be used to trace the parsing process. It returns a trace and the resulting parse tree at each step, if parsing is successful.
 - **parser.tokenize()** method can be used to tokenize the input string. It returns a list of tokens.
