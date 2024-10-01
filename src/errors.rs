@@ -84,6 +84,37 @@ pub enum ParserError {
     Conflict { parser: Box<Parser>, state: usize, token: Token },
 }
 
+#[cfg(feature = "wasm")]
+#[cfg_attr(feature = "wasm", wasm_bindgen)]
+pub struct WasmParserError {
+    error: ParserError,
+}
+
+#[cfg(feature = "wasm")]
+impl WasmParserError {
+    pub fn new(error: ParserError) -> Self {
+        WasmParserError { error }
+    }
+}
+
+#[cfg(feature = "wasm")]
+#[cfg_attr(feature = "wasm", wasm_bindgen)]
+impl WasmParserError {
+    pub fn to_string_wasm(&self) -> String {
+        format!("{}", self.error)
+    }
+    pub fn serialize(&self) -> Result<JsValue, JsValue> {
+        serde_wasm_bindgen::to_value(&self.error).map_err(JsValue::from)
+    }
+    pub fn into_conflict_parser(self) -> Result<Parser, JsValue> {
+        match self.error {
+            //&Box<Parser>
+            ParserError::Conflict { parser, .. } => Ok(*parser),
+            _ => Err(JsValue::from("Error is not a conflict")),
+        }
+    }
+}
+
 
 /// Parsing error of an input tried to be parsed with a parser.
 #[cfg_attr(feature = "serde", derive(Serialize))]
@@ -93,15 +124,17 @@ pub enum ParserError {
 pub enum ParsingError {
     /// An unknown token has been encountered.
     #[error(
-        "unknown token {}",
+        "unknown token {} at {}",
         format_smolstr!("{}", token).green(),
+        format_smolstr!("{}:{}", span.line, span.column).cyan()
     )]
-    UnknownToken { token: SmolStr },
+    UnknownToken { token: SmolStr, span: Span },
 
     /// An unexpected token has been encountered.
     #[error(
-        "unexpected token {} (expected {})",
+        "unexpected token {} at {} (expected {})",
         format_smolstr!("{}", token).green(),
+        format_smolstr!("{}:{}", span.line, span.column).cyan(),
         if expected.len() == 1 {
             format!("{}", format_smolstr!("{}", expected[0]).green())
         } else {
@@ -111,11 +144,12 @@ pub enum ParsingError {
             )
         },
     )]
-    UnexpectedToken { token: SmolStr, expected: SmallVec<[Token; 2]> },
+    UnexpectedToken { token: SmolStr, expected: SmallVec<[Token; 2]>, span: Span },
 
     /// An unexpected end of input has been encountered.
     #[error(
-        "unexpected end of input (expected {})",
+        "unexpected end of input at {} (expected {})",
+        format_smolstr!("{}:{}", span.line, span.column).cyan(),
         if expected.len() == 1 {
             format!("{}", format_smolstr!("{}", expected[0]).green())
         } else {
@@ -125,5 +159,5 @@ pub enum ParsingError {
             )
         },
     )]
-    UnexpectedEof { expected: SmallVec<[Token; 2]> },
+    UnexpectedEof { expected: SmallVec<[Token; 2]>, span: Span },
 }

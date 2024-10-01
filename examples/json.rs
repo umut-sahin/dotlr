@@ -21,7 +21,7 @@ pub enum Value {
 impl From<Tree<'_>> for Value {
     fn from(tree: Tree) -> Value {
         match tree {
-            Tree::Terminal { token, slice } => {
+            Tree::Terminal { token, slice, .. } => {
                 match token {
                     Token::Constant(constant_token) => {
                         match constant_token.as_str() {

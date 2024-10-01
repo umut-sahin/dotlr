@@ -24,7 +24,7 @@ impl<T: AsRef<str>> MockColored for T {
     }
 }
 
-/// Serialize a map of regex objects to a map of regex strings.
+/// Serializes a map of regex objects to a map of regex strings.
 #[cfg(feature = "serde")]
 pub fn serialize_regex_map<S>(
     map: &IndexMap<RegexToken, Regex>,
@@ -38,4 +38,25 @@ where
         map_serializer.serialize_entry(key, &value.to_string())?;
     }
     map_serializer.end()
+}
+
+
+/// Counts the number of new lines in a slice and returns the offset after the last new line.
+pub fn count_new_lines(slice: &str) -> (usize, Option<usize>) {
+    let mut offset_after_newline = None;
+    let mut count = 0;
+    for (offset, byte) in slice.bytes().enumerate() {
+        if byte == b'\n' {
+            offset_after_newline = Some(offset + 1);
+            count += 1;
+        }
+    }
+    (count, offset_after_newline)
+}
+
+/// Counts column position of a char.
+///
+/// The resulting column position is the 1 indexed utf-8 charater in the slice.
+pub fn count_col_position(slice: &str) -> usize {
+    slice.chars().count() + 1
 }
