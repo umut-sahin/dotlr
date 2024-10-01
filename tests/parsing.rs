@@ -13,7 +13,7 @@ fn raising_correct_error_when_encountering_unknown_token_during_parsing_calculat
     let parser = Parser::lr(grammar).unwrap();
 
     let error = parser.tokenize("a").unwrap_err();
-    assert_eq!(error.to_string(), "unknown token a");
+    assert_eq!(error.to_string(), "unknown token a at 1:1");
 }
 
 #[test]
@@ -23,7 +23,7 @@ fn raising_correct_error_when_encountering_unexpected_token_during_parsing_calcu
     let tokens = parser.tokenize("1 + /").unwrap();
 
     let error = parser.parse(tokens).unwrap_err();
-    assert_eq!(error.to_string(), "unexpected token / (expected one of '(', %f)");
+    assert_eq!(error.to_string(), "unexpected token / at 1:5 (expected one of '(', %f)");
 }
 
 #[test]
@@ -35,7 +35,7 @@ fn raising_correct_error_when_encountering_unexpected_eof_during_parsing_calcula
     let error = parser.parse(tokens).unwrap_err();
     assert_eq!(
         error.to_string(),
-        "unexpected end of input (expected one of '^', '+', '-', '*', '/', ')')",
+        "unexpected end of input at 1:7 (expected one of '^', '+', '-', '*', '/', ')')",
     );
 }
 

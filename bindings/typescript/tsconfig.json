@@ -3,13 +3,11 @@
     "target": "ES2020",
     "module": "esnext",
     "moduleResolution": "node",
-    "lib": [
-      "esnext",
-      "dom"
-    ],
+    "lib": ["esnext", "dom"],
     "declaration": true,
     "esModuleInterop": true,
     "outDir": "dist",
-    "rootDir": "./src",
-  }
+    "rootDir": "./src"
+  },
+  "include": ["src"]
 }
