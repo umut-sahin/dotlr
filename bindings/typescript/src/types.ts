@@ -20,6 +20,7 @@ export type Tree<NT extends string = string, T extends Token = Token> = {
     value: {
         token: T,
         slice: string
+        span: Span
     }
 } | {
     type: 'NonTerminal'
@@ -94,16 +95,19 @@ export type ParsingError<T extends Token = Token> = {
     type: "UnknownToken",
     value: {
         token: string
+        span: Span
     }
 } | {
     type: "UnexpectedToken"
     value: {
         token: string
+        span: Span
         expected: T[]
     }
 } | {
     type: "UnexpectedEof"
     value: {
+        span: Span
         expected: T[]
     }
 }
@@ -147,6 +151,16 @@ export type Action = {
     value: {
         rule_index: number
     }
+}
+export type Span = {
+    offset: number,
+    len: number,
+    column: number,
+    line: number
+}
+export type Spanned<T> = {
+    span: Span,
+    value: T
 }
 
 

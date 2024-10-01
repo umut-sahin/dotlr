@@ -30,17 +30,32 @@ fn failing_to_parse_syntactically_incorrect_grammars() {
 #[test]
 fn raising_correct_error_when_parsing_unexpected_token_grammar() {
     let error = Grammar::parse(common::grammars::UNEXPECTED_TOKEN).unwrap_err();
-    assert_eq!(
-        error.to_string(),
-        "unexpected token -> at line 1 column 6 \
-        (expected one of symbol, constant token, regular expression token)"
-    );
+    match error {
+        dotlr::GrammarError::UnexpectedToken { line, column, token, expected } => {
+            assert_eq!(line, 1);
+            assert_eq!(column, 6);
+            assert_eq!(token.as_str(), "->");
+            assert_eq!(expected.iter().map(|token| token.as_str()).collect::<Vec<_>>(), [
+                "symbol",
+                "constant token",
+                "regular expression token"
+            ]);
+        },
+        _ => unreachable!(),
+    }
 }
 
 #[test]
 fn raising_correct_error_when_parsing_invalid_regex_grammar() {
     let error = Grammar::parse(common::grammars::INVALID_REGEX).unwrap_err();
-    assert_eq!(error.to_string(), "invalid regex /[1-9][0-9+/ at line 3 column 8");
+    match error {
+        dotlr::GrammarError::InvalidRegex { line, column, regex } => {
+            assert_eq!(line, 3);
+            assert_eq!(column, 8);
+            assert_eq!(regex.as_str(), "/[1-9][0-9+/");
+        },
+        _ => unreachable!(),
+    }
 }
 
 

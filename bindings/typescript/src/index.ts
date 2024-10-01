@@ -9,7 +9,7 @@ import {
     ParserError,
     ParsingError,
     ParsingTables,
-    Rule,
+    Rule, Spanned,
     Token,
     Trace,
     Tree
@@ -17,8 +17,8 @@ import {
 import {Err, Ok} from "ts-results";
 
 export class Grammar<
-    T extends string = string, 
-    NT extends string = string, 
+    T extends string = string,
+    NT extends string = string,
     R extends string = string
 > {
     grammar: _Grammar
@@ -75,8 +75,8 @@ export class Grammar<
 
 
 class Parser<
-    T extends string = string, 
-    NT extends string = string, 
+    T extends string = string,
+    NT extends string = string,
     R extends string = string
 > {
 
@@ -128,7 +128,7 @@ class Parser<
 
     tokenize(input: string) {
         try {
-            const tokens = this.parser.tokenize_wasm(input) as [Token<T, R>, string][]
+            const tokens = this.parser.tokenize_wasm(input) as [Spanned<Token<T, R>>, string][]
             return Ok(tokens.map(([token, slice]) => ({
                 token, slice
             })))
@@ -139,7 +139,10 @@ class Parser<
 
     trace(input: string) {
         try {
-            const [trace, tree] = this.parser.trace_wasm(input) as [Trace<Tree<NT, Token<T, R>>>, Tree<NT, Token<T, R>>]
+            const [trace, tree] = this.parser.trace_wasm(input) as [
+                Trace<Tree<NT, Token<T, R>>>,
+                Tree<NT, Token<T, R>>
+            ]
             return Ok({
                 trace,
                 tree

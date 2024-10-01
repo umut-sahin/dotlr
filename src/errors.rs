@@ -96,12 +96,13 @@ pub enum ParsingError {
         "unknown token {}",
         format_smolstr!("{}", token).green(),
     )]
-    UnknownToken { token: SmolStr },
+    UnknownToken { token: SmolStr, span: Span },
 
     /// An unexpected token has been encountered.
     #[error(
-        "unexpected token {} (expected {})",
+        "unexpected token {} at [{}] (expected {})",
         format_smolstr!("{}", token).green(),
+        format_smolstr!("{}:{}", span.line, span.column).cyan(),
         if expected.len() == 1 {
             format!("{}", format_smolstr!("{}", expected[0]).green())
         } else {
@@ -111,11 +112,12 @@ pub enum ParsingError {
             )
         },
     )]
-    UnexpectedToken { token: SmolStr, expected: SmallVec<[Token; 2]> },
+    UnexpectedToken { token: SmolStr, expected: SmallVec<[Token; 2]>, span: Span },
 
     /// An unexpected end of input has been encountered.
     #[error(
-        "unexpected end of input (expected {})",
+        "unexpected end of input at [{}] (expected {})",
+        format_smolstr!("{}:{}", span.line, span.column).cyan(),
         if expected.len() == 1 {
             format!("{}", format_smolstr!("{}", expected[0]).green())
         } else {
@@ -125,5 +127,5 @@ pub enum ParsingError {
             )
         },
     )]
-    UnexpectedEof { expected: SmallVec<[Token; 2]> },
+    UnexpectedEof { expected: SmallVec<[Token; 2]>, span: Span },
 }
