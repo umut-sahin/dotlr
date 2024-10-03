@@ -41,6 +41,10 @@ pub use {
         Trace,
     },
     tree::Tree,
+    utils::{
+        Span,
+        Spanned,
+    },
 };
 
 mod prelude {

@@ -13,6 +13,7 @@ pub enum Tree<'i> {
     Terminal {
         /// Matching token.
         token: Token,
+        span: Span,
         /// Matching slice.
         slice: &'i str,
     },

@@ -81,7 +81,6 @@ impl<T: Into<SmolStr>> From<T> for RegexToken {
     }
 }
 
-
 /// Token (e.g., `'+'`, `%f`, `$`) in a grammar.
 #[cfg_attr(feature = "serde", derive(Serialize))]
 #[cfg_attr(feature = "serde", serde(crate = "serde_renamed"))]

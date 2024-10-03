@@ -39,3 +39,54 @@ where
     }
     map_serializer.end()
 }
+
+
+#[cfg_attr(feature = "serde", derive(Serialize))]
+#[cfg_attr(feature = "serde", serde(crate = "serde_renamed"))]
+#[derive(Clone, Debug)]
+pub struct Span {
+    pub offset: usize,
+    pub len: usize,
+    pub column: usize,
+    pub line: usize,
+}
+
+
+#[cfg(not(feature = "serde"))]
+#[derive(Clone, Debug)]
+pub struct Spanned<T: Debug + Clone> {
+    pub value: T,
+    span: Span,
+}
+#[cfg(feature = "serde")]
+#[cfg_attr(feature = "serde", derive(Serialize))]
+#[cfg_attr(feature = "serde", serde(crate = "serde_renamed"))]
+#[derive(Clone, Debug)]
+pub struct Spanned<T: Serialize + Debug + Clone> {
+    pub value: T,
+    span: Span,
+}
+
+
+impl<
+    #[cfg(not(feature = "serde"))] T: Debug + Clone,
+    #[cfg(feature = "serde")] T: Serialize + Debug + Clone,
+> Spanned<T>
+{
+    pub fn new(value: T, span: Span) -> Self {
+        Self { value, span }
+    }
+    pub fn get_span(&self) -> &Span {
+        &self.span
+    }
+
+    pub fn into_tuple(self) -> (T, Span) {
+        (self.value, self.span)
+    }
+    pub fn get_span_value(&self) -> &T {
+        &self.value
+    }
+    pub fn into_span_value(self) -> T {
+        self.value
+    }
+}
