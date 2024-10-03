@@ -1,4 +1,15 @@
-import type {Action, AtomicPattern, GrammarError, Item, ParserError, ParsingError, Rule, Token, Tree} from "./types";
+import type {
+    Action,
+    AtomicPattern,
+    GrammarError,
+    Item,
+    ParserError,
+    ParsingError,
+    Rule,
+    Span,
+    Token,
+    Tree
+} from "./types";
 
 export function stringifyToken(token: Token, noApostrophes = false) {
     if (token.type === 'Eof') return "$"
@@ -83,11 +94,11 @@ export function stringifyTree(tree: Tree, indent: string = '', isLast: boolean =
 
 export function stringifyGrammarError(e: GrammarError) {
     if (e.type === "UnexpectedToken") {
-        return `Unexpected token, expected one of:\n${e.value.expected.map(maybeToken).join(', ')}`
+        return `Unexpected token at [${e.value.line}:${e.value.column}], expected one of:\n${e.value.expected.map(maybeToken).join(', ')}`
     } else if (e.type === "UnexpectedEof") {
         return `Unexpected end of input, expected one of:\n${e.value.expected.map(maybeToken).join(', ')}`
     } else if (e.type === 'InvalidRegex') {
-        return `Invalid regular expression\n${e.value.regex}`
+        return `Invalid regular expression at [${e.value.line}:${e.value.column}]\n${e.value.regex}`
     }
     return "Unknown error"
 }
@@ -96,13 +107,17 @@ function maybeToken(token: Token|string){
     return typeof token === 'string' ? token : stringifyToken(token)
 }
 
+function stringifySpan(span: Span){
+    return `[${span.line}:${span.column}]`
+}
+
 export function stringifyParsingError(error: ParsingError){
     if (error.type === "UnexpectedEof") {
-        return `Unexpected end of input, expected one of:\n${error.value.expected.map(maybeToken).join(", ")}`
+        return `Unexpected end of input at ${stringifySpan(error.value.span)}, expected one of:\n${error.value.expected.map(maybeToken).join(", ")}`
     } else if (error.type === 'UnknownToken') {
-        return `Unknown token: ${error.value.token}`
+        return `Unknown token at ${stringifySpan(error.value.span)}: ${error.value.token}`
     } else if (error.type === "UnexpectedToken") {
-        return `Unexpected token, expected one of:\n${error.value.expected.map(maybeToken).join(', ')}`
+        return `Unexpected token at ${stringifySpan(error.value.span)}, expected one of:\n${error.value.expected.map(maybeToken).join(', ')}`
     }
     return "Unknown error"
 }
