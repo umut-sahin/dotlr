@@ -13,8 +13,8 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  conformance:
-    name: Conformance
+  conformance-rust:
+    name: Conformance Rust
     runs-on: "ubuntu-latest"
     steps:
       - name: Checkout
@@ -51,7 +51,29 @@ jobs:
           command: clippy
           args: -- --deny warnings
 
-  test:
+  conformance-ts:
+    name: Conformance TypeScript
+    runs-on: "ubuntu-latest"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '22'
+
+      - name: Install Dependencies
+        run: cd bindings/typescript && npm install
+
+      - name: Eslint
+        run: cd bindings/typescript && npm run lint
+
+      - name: Prettier
+        run: cd bindings/typescript && npm run format:check
+
+
+  test-rust:
     strategy:
       matrix:
         os:
@@ -59,7 +81,7 @@ jobs:
           - macos-latest
           - ubuntu-latest
 
-    name: Test (${{ matrix.os }})
+    name: Test Rust (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
@@ -83,14 +105,14 @@ jobs:
           toolchain: stable
           override: true
 
-      - name: Test
+      - name: Test Rust
         uses: actions-rs/cargo@v1
         with:
           command: test
 
   publish-crates-io:
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [ conformance, test ]
+    needs: [ conformance-rust, test-rust ]
 
     name: Publish to Crates.io
     runs-on: "ubuntu-latest"
@@ -112,7 +134,7 @@ jobs:
 
   publish-npm:
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [ conformance, test ]
+    needs: [ conformance-rust, test-rust ]
 
     name: Publish to NPM
     runs-on: "ubuntu-latest"
@@ -130,7 +152,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '20'
+          node-version: '22'
 
       - name: Install Dependencies
         run: cd bindings/typescript && npm install

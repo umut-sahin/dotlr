@@ -4,6 +4,7 @@ mod automaton;
 mod errors;
 mod grammar;
 mod parser;
+mod span;
 mod tables;
 mod trace;
 mod tree;
@@ -30,6 +31,10 @@ pub use {
         Token,
     },
     parser::Parser,
+    span::{
+        Span,
+        Spanned,
+    },
     tables::{
         Action,
         FirstTable,
@@ -41,6 +46,10 @@ pub use {
         Trace,
     },
     tree::Tree,
+    utils::{
+        count_col_position,
+        count_new_lines,
+    },
 };
 
 mod prelude {
@@ -50,9 +59,11 @@ mod prelude {
         utils::serialize_regex_map,
     };
 
-
     #[cfg(feature = "wasm")]
-    pub use wasm_bindgen::prelude::*;
+    pub use {
+        errors::WasmParserError,
+        wasm_bindgen::prelude::*,
+    };
 
     #[cfg(not(target_family = "wasm"))]
     pub use colored::*;
