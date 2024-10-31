@@ -17,46 +17,39 @@ impl FirstTable {
         while !done {
             done = true;
             for rule in grammar.rules().iter() {
-                let symbol = rule.symbol();
-                let first_atomic_pattern = rule.pattern().first().unwrap();
-
-                if matches!(
-                    first_atomic_pattern,
-                    AtomicPattern::Symbol(atomic_pattern) if atomic_pattern == symbol
-                ) {
-                    continue;
-                }
-
-                let mut possible_first_tokens = match first_table.get_mut(symbol) {
-                    Some(entry) => std::mem::take(entry),
-                    None => IndexSet::new(),
-                };
+                let mut possible_first_tokens: IndexSet<Token> =
+                    first_table.get(rule.symbol()).cloned().unwrap_or_default();
 
                 let old_possible_first_token_count = possible_first_tokens.len();
-                match first_atomic_pattern {
-                    AtomicPattern::Symbol(symbol) => {
-                        if let Some(new_possible_first_tokens) = first_table.get(symbol) {
-                            possible_first_tokens.extend(new_possible_first_tokens.iter().cloned());
-                        }
-                    },
-                    AtomicPattern::Token(token) => {
-                        possible_first_tokens.insert(token.clone());
-                    },
+                for (index, atomic_pattern) in rule.pattern().iter().enumerate() {
+                    match atomic_pattern {
+                        AtomicPattern::Symbol(symbol) => {
+                            if let Some(new_possible_first_tokens) = first_table.get(symbol) {
+                                possible_first_tokens.extend(
+                                    new_possible_first_tokens
+                                        .iter()
+                                        .filter(|&possible_token| *possible_token != Token::Empty)
+                                        .cloned(),
+                                );
+                            }
+                            if !grammar.empty_symbols().contains(symbol) {
+                                break;
+                            }
+                        },
+                        AtomicPattern::Token(token) => {
+                            possible_first_tokens.insert(token.clone());
+                            break;
+                        },
+                    }
+                    if index == rule.pattern().len() - 1 {
+                        possible_first_tokens.insert(Token::Empty);
+                    }
                 }
                 let new_possible_first_token_count = possible_first_tokens.len();
 
                 if new_possible_first_token_count != old_possible_first_token_count {
                     done = false;
-                }
-                if new_possible_first_token_count > 0 {
-                    match first_table.get_mut(symbol) {
-                        Some(entry) => {
-                            *entry = possible_first_tokens;
-                        },
-                        None => {
-                            first_table.insert(symbol.clone(), possible_first_tokens);
-                        },
-                    }
+                    first_table.insert(rule.symbol().clone(), possible_first_tokens);
                 }
             }
         }
@@ -100,66 +93,28 @@ impl FollowTable {
                         AtomicPattern::Token(_) => continue,
                     };
 
-                    let mut possible_follow_tokens = match follow_table.get_mut(ap1_symbol) {
-                        Some(entry) => std::mem::take(entry),
-                        None => IndexSet::new(),
-                    };
-
-                    let old_possible_follow_token_count = possible_follow_tokens.len();
                     match ap2 {
                         AtomicPattern::Symbol(symbol) => {
                             if let Some(new_possible_follow_tokens) = first_table.get(symbol) {
-                                possible_follow_tokens
-                                    .extend(new_possible_follow_tokens.iter().cloned());
+                                possible_follow_tokens.extend(
+                                    new_possible_follow_tokens
+                                        .iter()
+                                        .filter(|&possible_token| *possible_token != Token::Empty)
+                                        .cloned(),
+                                );
                             }
                         },
                         AtomicPattern::Token(token) => {
-                            possible_follow_tokens.insert(token.clone());
+                            if *token != Token::Empty {
+                                possible_follow_tokens.insert(token.clone());
+                            }
                         },
-                    }
-                    let new_possible_follow_token_count = possible_follow_tokens.len();
-
-                    if new_possible_follow_token_count != old_possible_follow_token_count {
-                        done = false;
-                    }
-
-                    if new_possible_follow_token_count > 0 {
-                        match follow_table.get_mut(ap1_symbol) {
-                            Some(entry) => {
-                                *entry = possible_follow_tokens;
-                            },
-                            None => {
-                                follow_table.insert(ap1_symbol.clone(), possible_follow_tokens);
-                            },
-                        }
                     }
                 }
 
                 if let AtomicPattern::Symbol(last_ap) = rule.pattern().last().unwrap() {
-                    let mut possible_follow_tokens = match follow_table.get_mut(last_ap) {
-                        Some(entry) => std::mem::take(entry),
-                        None => IndexSet::new(),
-                    };
-
-                    let old_possible_follow_token_count = possible_follow_tokens.len();
                     if let Some(new_possible_follow_tokens) = follow_table.get(rule.symbol()) {
                         possible_follow_tokens.extend(new_possible_follow_tokens.iter().cloned());
-                    }
-                    let new_possible_follow_token_count = possible_follow_tokens.len();
-
-                    if new_possible_follow_token_count != old_possible_follow_token_count {
-                        done = false;
-                    }
-
-                    if new_possible_follow_token_count > 0 {
-                        match follow_table.get_mut(last_ap) {
-                            Some(entry) => {
-                                *entry = possible_follow_tokens;
-                            },
-                            None => {
-                                follow_table.insert(last_ap.clone(), possible_follow_tokens);
-                            },
-                        }
                     }
                 }
             }
