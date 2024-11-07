@@ -88,6 +88,8 @@ impl<T: Into<SmolStr>> From<T> for RegexToken {
 #[cfg_attr(feature = "serde", serde(tag = "type", content = "value"))]
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum Token {
+    /// Empty token.
+    Empty,
     /// Constant token.
     Constant(ConstantToken),
     /// Regular expression token.
@@ -99,6 +101,9 @@ pub enum Token {
 impl Display for Token {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Token::Empty => {
+                write!(f, "ε")
+            },
             Token::Constant(constant_token) => {
                 write!(f, "{}", constant_token)
             },
@@ -200,6 +205,11 @@ impl Rule {
     pub fn pattern(&self) -> &[AtomicPattern] {
         &self.pattern
     }
+
+    /// Gets whether the rule is `S -> ''`.
+    pub fn is_empty_pattern(&self) -> bool {
+        self.pattern.len() == 1 && self.pattern[0] == AtomicPattern::Token(Token::Empty)
+    }
 }
 
 impl Display for Rule {
@@ -221,6 +231,7 @@ impl Display for Rule {
 pub struct Grammar {
     symbols: IndexSet<Symbol>,
     start_symbol: Symbol,
+    empty_symbols: IndexSet<Symbol>,
     constant_tokens: IndexSet<ConstantToken>,
     #[cfg_attr(feature = "serde", serde(serialize_with = "utils::serialize_regex_map"))]
     regular_expressions: IndexMap<RegexToken, Regex>,
@@ -235,18 +246,6 @@ impl Grammar {
     }
 }
 
-#[cfg(feature = "wasm")]
-#[cfg_attr(feature = "wasm", wasm_bindgen)]
-impl Grammar {
-    pub fn parse_wasm(grammar_string: &str) -> Result<Grammar, JsValue> {
-        match Grammar::parse(grammar_string) {
-            Ok(grammar) => Ok(grammar),
-            Err(error) => Err(serde_wasm_bindgen::to_value(&error)?),
-        }
-    }
-}
-
-
 impl Grammar {
     /// Gets the symbols of the grammar.
     pub fn symbols(&self) -> &IndexSet<Symbol> {
@@ -256,6 +255,11 @@ impl Grammar {
     /// Gets the start symbol of the grammar.
     pub fn start_symbol(&self) -> &Symbol {
         &self.start_symbol
+    }
+
+    /// Gets the empty symbols of the grammar.
+    pub fn empty_symbols(&self) -> &IndexSet<Symbol> {
+        &self.empty_symbols
     }
 
     /// Gets the constant tokens of the grammar.
@@ -271,6 +275,32 @@ impl Grammar {
     /// Gets the rules of the grammar.
     pub fn rules(&self) -> &[Rule] {
         &self.rules
+    }
+}
+
+impl Display for Grammar {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        for rule in self.rules.iter() {
+            writeln!(f, "{}", rule)?;
+        }
+        if !self.regular_expressions.is_empty() {
+            writeln!(f)?;
+        }
+        for (regex_token, regex) in self.regular_expressions.iter() {
+            writeln!(f, "{} -> /{}/", regex_token, regex)?;
+        }
+        Ok(())
+    }
+}
+
+#[cfg(feature = "wasm")]
+#[cfg_attr(feature = "wasm", wasm_bindgen)]
+impl Grammar {
+    pub fn parse_wasm(grammar_string: &str) -> Result<Grammar, JsValue> {
+        match Grammar::parse(grammar_string) {
+            Ok(grammar) => Ok(grammar),
+            Err(error) => Err(serde_wasm_bindgen::to_value(&error)?),
+        }
     }
 }
 
@@ -302,23 +332,6 @@ impl Grammar {
         self.clone()
     }
 }
-
-
-impl Display for Grammar {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        for rule in self.rules.iter() {
-            writeln!(f, "{}", rule)?;
-        }
-        if !self.regular_expressions.is_empty() {
-            writeln!(f)?;
-        }
-        for (regex_token, regex) in self.regular_expressions.iter() {
-            writeln!(f, "{} -> /{}/", regex_token, regex)?;
-        }
-        Ok(())
-    }
-}
-
 
 /// Internal module to parse grammar strings.
 mod grammar_parser {
@@ -423,6 +436,7 @@ mod grammar_parser {
 
         let mut symbols = IndexSet::new();
         let mut start_symbol = None;
+        let mut empty_symbols = IndexSet::new();
         let mut constant_tokens = IndexSet::new();
         let mut regular_expressions = IndexMap::new();
         let mut rules = Vec::new();
@@ -500,8 +514,12 @@ mod grammar_parser {
                             pattern.push(AtomicPattern::Symbol(symbol));
                         },
                         GrammarToken::ConstantToken(constant_token) => {
-                            constant_tokens.insert(constant_token.clone());
-                            pattern.push(AtomicPattern::Token(Token::Constant(constant_token)));
+                            if constant_token.is_empty() {
+                                pattern.push(AtomicPattern::Token(Token::Empty));
+                            } else {
+                                constant_tokens.insert(constant_token.clone());
+                                pattern.push(AtomicPattern::Token(Token::Constant(constant_token)));
+                            }
                         },
                         GrammarToken::RegexToken(regex_token) => {
                             pattern.push(AtomicPattern::Token(Token::Regex(regex_token)));
@@ -570,9 +588,22 @@ mod grammar_parser {
             },
         }
 
+        for rule in rules.iter_mut() {
+            if rule.pattern.as_slice() == [AtomicPattern::Token(Token::Empty)] {
+                empty_symbols.insert(rule.symbol.clone());
+                continue;
+            }
+
+            if rule.pattern.contains(&AtomicPattern::Token(Token::Empty)) {
+                rule.pattern
+                    .retain(|atomic_pattern| *atomic_pattern != AtomicPattern::Token(Token::Empty));
+            }
+        }
+
         Ok(Grammar {
             symbols,
             start_symbol: start_symbol.unwrap_or(Symbol::from("")),
+            empty_symbols,
             constant_tokens,
             regular_expressions,
             rules,

@@ -159,7 +159,7 @@ impl State {
     fn compute_transitions(&self, state_counter: &mut usize) -> Vec<(AtomicPattern, State)> {
         let mut transitions = IndexMap::<AtomicPattern, State>::new();
         for item in self.items.iter() {
-            if item.dot == item.rule.pattern().len() {
+            if item.dot == item.rule.pattern().len() || item.rule().is_empty_pattern() {
                 continue;
             }
 
@@ -256,7 +256,6 @@ impl Automaton {
                 *transition_target = *transition_map.get(transition_target).unwrap();
             }
         }
-
         Automaton { states: final_states }
     }
 }

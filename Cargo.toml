@@ -32,7 +32,10 @@ wasm-bindgen = { version = "0.2.83", optional = true }
 [target.'cfg(not(target_family = "wasm"))'.dependencies]
 colored = { version = "2.1" }
 
-[dev-dependencies]
+[target.'cfg(target_family = "wasm")'.dev-dependencies]
+wasm-bindgen-test = { version = "0.3.36" }
+
+[target.'cfg(not(target_family = "wasm"))'.dev-dependencies]
 criterion = { version = "0.5", features = ["html_reports"] }
 
 [features]

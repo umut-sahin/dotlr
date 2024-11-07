@@ -38,7 +38,7 @@ impl From<Tree<'_>> for Value {
                             _ => unreachable!(),
                         }
                     },
-                    Token::Eof => {
+                    Token::Eof | Token::Empty => {
                         unreachable!();
                     },
                 }
