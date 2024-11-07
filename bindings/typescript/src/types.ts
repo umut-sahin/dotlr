@@ -40,6 +40,8 @@ export type Token<C = string, R = string> = {
     value: R
 } | {
     type: 'Eof'
+} | {
+    type: 'Empty'
 }
 
 //prettier-ignore
