@@ -21,8 +21,12 @@ use {
     std::ops::Deref,
 };
 
+#[cfg(target_family = "wasm")]
+use wasm_bindgen_test::*;
+
 
 #[test]
+#[cfg_attr(target_family = "wasm", wasm_bindgen_test)]
 fn creating_parser_for_semantically_correct_grammars() {
     for grammar in common::grammars::CORRECT {
         let grammar = Grammar::parse(grammar).unwrap();
@@ -31,6 +35,7 @@ fn creating_parser_for_semantically_correct_grammars() {
 }
 
 #[test]
+#[cfg_attr(target_family = "wasm", wasm_bindgen_test)]
 fn failing_to_create_parser_for_semantically_incorrect_grammars() {
     for grammar in common::grammars::SEMANTICALLY_INCORRECT {
         let grammar = Grammar::parse(grammar).unwrap();
@@ -40,6 +45,7 @@ fn failing_to_create_parser_for_semantically_incorrect_grammars() {
 
 
 #[test]
+#[cfg_attr(target_family = "wasm", wasm_bindgen_test)]
 fn raising_correct_error_when_creating_parser_for_empty_grammar() {
     let grammar = Grammar::parse(common::grammars::EMPTY).unwrap();
     let error = Parser::lr(grammar).unwrap_err();
@@ -47,6 +53,7 @@ fn raising_correct_error_when_creating_parser_for_empty_grammar() {
 }
 
 #[test]
+#[cfg_attr(target_family = "wasm", wasm_bindgen_test)]
 fn raising_correct_error_when_creating_parser_for_undefined_symbol_grammar() {
     let grammar = Grammar::parse(common::grammars::UNDEFINED_SYMBOL).unwrap();
     let error = Parser::lr(grammar).unwrap_err();
@@ -54,6 +61,7 @@ fn raising_correct_error_when_creating_parser_for_undefined_symbol_grammar() {
 }
 
 #[test]
+#[cfg_attr(target_family = "wasm", wasm_bindgen_test)]
 fn raising_correct_error_when_creating_parser_for_undefined_regex_token_grammar() {
     let grammar = Grammar::parse(common::grammars::UNDEFINED_REGEX_TOKEN).unwrap();
     let error = Parser::lr(grammar).unwrap_err();
@@ -61,6 +69,7 @@ fn raising_correct_error_when_creating_parser_for_undefined_regex_token_grammar(
 }
 
 #[test]
+#[cfg_attr(target_family = "wasm", wasm_bindgen_test)]
 fn raising_correct_error_when_creating_parser_for_shift_reduce_conflict_grammar() {
     let grammar = Grammar::parse(common::grammars::SHIFT_REDUCE_CONFLICT).unwrap();
     let error = Parser::lr(grammar).unwrap_err();
@@ -88,6 +97,7 @@ fn raising_correct_error_when_creating_parser_for_shift_reduce_conflict_grammar(
 }
 
 #[test]
+#[cfg_attr(target_family = "wasm", wasm_bindgen_test)]
 fn raising_correct_error_when_creating_parser_for_reduce_reduce_conflict_grammar() {
     let grammar = Grammar::parse(common::grammars::REDUCE_REDUCE_CONFLICT).unwrap();
     let error = Parser::lr(grammar).unwrap_err();
@@ -111,6 +121,7 @@ fn raising_correct_error_when_creating_parser_for_reduce_reduce_conflict_grammar
 }
 
 #[test]
+#[cfg_attr(target_family = "wasm", wasm_bindgen_test)]
 fn raising_correct_error_when_creating_lalr_parser_for_non_lalr_grammar() {
     let grammar = Grammar::parse(common::grammars::NOT_LALR).unwrap();
     let error = Parser::lalr(grammar).unwrap_err();
@@ -128,6 +139,7 @@ fn raising_correct_error_when_creating_lalr_parser_for_non_lalr_grammar() {
 
 
 #[test]
+#[cfg_attr(target_family = "wasm", wasm_bindgen_test)]
 fn correctly_creating_lr_parser_for_binary_addition_grammar() {
     let grammar = Grammar::parse(common::grammars::BINARY_ADDITION).unwrap();
     let parser = Parser::lr(grammar).unwrap();
@@ -655,6 +667,7 @@ B -> '1'
 }
 
 #[test]
+#[cfg_attr(target_family = "wasm", wasm_bindgen_test)]
 fn correctly_creating_lalr_parser_for_g10_grammar() {
     let grammar = Grammar::parse(common::grammars::G10).unwrap();
     let parser = Parser::lalr(grammar).unwrap();

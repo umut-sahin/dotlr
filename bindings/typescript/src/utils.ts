@@ -12,6 +12,7 @@ import type {
 
 export function stringifyToken(token: Token, noApostrophes = false) {
   if (token.type === "Eof") return "$";
+  if (token.type === "Empty") return "ε";
   if (token.type === "Regex") return `%${token.value}`;
   if (token.type === "Constant")
     return noApostrophes ? token.value : `'${token.value}'`;
@@ -86,7 +87,7 @@ export function stringifyTree(
 
   if (tree.type === "Terminal") {
     const { token, slice } = tree.value;
-    if (token.type !== "Eof") {
+    if (token.type !== "Eof" && token.type !== "Empty") {
       result += `${indent}${linePrefix}${token.value} [${slice}]\n`;
     }
   } else {

@@ -8,8 +8,11 @@ use dotlr::{
     Symbol,
 };
 
+#[cfg(target_family = "wasm")]
+use wasm_bindgen_test::*;
 
 #[test]
+#[cfg_attr(target_family = "wasm", wasm_bindgen_test)]
 fn parsing_syntactically_correct_grammars() {
     for grammar in common::grammars::CORRECT {
         assert!(Grammar::parse(grammar).is_ok())
@@ -20,6 +23,7 @@ fn parsing_syntactically_correct_grammars() {
 }
 
 #[test]
+#[cfg_attr(target_family = "wasm", wasm_bindgen_test)]
 fn failing_to_parse_syntactically_incorrect_grammars() {
     for grammar in common::grammars::SYNTACTICALLY_INCORRECT {
         assert!(Grammar::parse(grammar).is_err())
@@ -28,6 +32,7 @@ fn failing_to_parse_syntactically_incorrect_grammars() {
 
 
 #[test]
+#[cfg_attr(target_family = "wasm", wasm_bindgen_test)]
 fn raising_correct_error_when_parsing_unexpected_token_grammar() {
     let error = Grammar::parse(common::grammars::UNEXPECTED_TOKEN).unwrap_err();
     match error {
@@ -46,6 +51,7 @@ fn raising_correct_error_when_parsing_unexpected_token_grammar() {
 }
 
 #[test]
+#[cfg_attr(target_family = "wasm", wasm_bindgen_test)]
 fn raising_correct_error_when_parsing_invalid_regex_grammar() {
     let error = Grammar::parse(common::grammars::INVALID_REGEX).unwrap_err();
     match error {
@@ -60,6 +66,7 @@ fn raising_correct_error_when_parsing_invalid_regex_grammar() {
 
 
 #[test]
+#[cfg_attr(target_family = "wasm", wasm_bindgen_test)]
 fn correctly_parsing_calculator_grammar() {
     let grammar = Grammar::parse(common::grammars::CALCULATOR).unwrap();
 

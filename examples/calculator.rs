@@ -92,7 +92,7 @@ fn evaluate(tree: Tree<'_>) -> f64 {
                         _ => unreachable!(),
                     }
                 },
-                Token::Constant(_) | Token::Eof => {
+                Token::Constant(_) | Token::Eof | Token::Empty => {
                     unreachable!();
                 },
             }
