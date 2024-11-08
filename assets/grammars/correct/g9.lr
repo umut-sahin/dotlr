@@ -1,0 +1,16 @@
+P -> E
+
+E -> T Ep
+
+Ep -> '+' T Ep
+Ep -> ''
+
+T -> F Tp
+
+Tp -> '*' F Tp
+Tp -> ''
+
+F -> '(' E ')'
+F -> %int
+
+%int -> /[0-9]+/

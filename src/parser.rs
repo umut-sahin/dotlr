@@ -41,17 +41,6 @@ impl Parser {
         parser.check_conflicts_internal()
     }
 }
-#[cfg(feature = "wasm")]
-#[cfg_attr(feature = "wasm", wasm_bindgen)]
-impl Parser {
-    pub fn new_wasm(grammar: Grammar) -> Result<Parser, WasmParserError> {
-        Parser::lr(grammar).map_err(WasmParserError::new)
-    }
-    pub fn new_lalr_wasm(grammar: Grammar) -> Result<Parser, WasmParserError> {
-        Parser::lalr(grammar).map_err(WasmParserError::new)
-    }
-}
-
 
 impl Parser {
     /// Gets the grammar of the parser.
@@ -87,29 +76,6 @@ impl Parser {
     /// Gets the goto table of the parser.
     pub fn goto_table(&self) -> &[IndexMap<Symbol, usize>] {
         self.parsing_tables.goto_table()
-    }
-}
-
-#[cfg(feature = "wasm")]
-#[cfg_attr(feature = "wasm", wasm_bindgen)]
-impl Parser {
-    pub fn first_table_wasm(&self) -> Result<JsValue, JsValue> {
-        Ok(serde_wasm_bindgen::to_value(&self.first_table)?)
-    }
-    pub fn follow_table_wasm(&self) -> Result<JsValue, JsValue> {
-        Ok(serde_wasm_bindgen::to_value(&self.follow_table)?)
-    }
-    pub fn automaton_wasm(&self) -> Result<JsValue, JsValue> {
-        Ok(serde_wasm_bindgen::to_value(&self.automaton)?)
-    }
-    pub fn parsing_tables_wasm(&self) -> Result<JsValue, JsValue> {
-        Ok(serde_wasm_bindgen::to_value(&self.parsing_tables)?)
-    }
-    pub fn action_table_wasm(&self) -> Result<JsValue, JsValue> {
-        Ok(serde_wasm_bindgen::to_value(&self.parsing_tables.action_table())?)
-    }
-    pub fn goto_table_wasm(&self) -> Result<JsValue, JsValue> {
-        Ok(serde_wasm_bindgen::to_value(&self.parsing_tables.goto_table())?)
     }
 }
 
@@ -211,44 +177,6 @@ impl Parser {
         self.parse_and_trace_internal(tokens, true)
     }
 }
-
-#[cfg(feature = "wasm")]
-#[cfg_attr(feature = "wasm", wasm_bindgen)]
-impl Parser {
-    pub fn tokenize_wasm(&self, input: &str) -> Result<JsValue, JsValue> {
-        match self.tokenize(input) {
-            Ok(tokens) => Ok(serde_wasm_bindgen::to_value(&tokens)?),
-            Err(error) => Err(serde_wasm_bindgen::to_value(&error)?),
-        }
-    }
-    pub fn parse_wasm(&self, input: &str) -> Result<JsValue, JsValue> {
-        let tokens = self.tokenize(input);
-        let tokens = match tokens {
-            Ok(tokens) => tokens,
-            Err(error) => return Err(serde_wasm_bindgen::to_value(&error)?),
-        };
-        match self.parse(tokens) {
-            Ok(tree) => Ok(serde_wasm_bindgen::to_value(&tree)?),
-            Err(error) => Err(serde_wasm_bindgen::to_value(&error)?),
-        }
-    }
-    pub fn trace_wasm(&self, input: &str) -> Result<Vec<JsValue>, JsValue> {
-        let tokens = self.tokenize(input);
-        let tokens = match tokens {
-            Ok(tokens) => tokens,
-            Err(error) => return Err(serde_wasm_bindgen::to_value(&error)?),
-        };
-        match self.trace(tokens) {
-            Ok((trace, tree)) => {
-                let trace = serde_wasm_bindgen::to_value(&trace)?;
-                let tree = serde_wasm_bindgen::to_value(&tree)?;
-                Ok(vec![trace, tree])
-            },
-            Err(error) => Err(serde_wasm_bindgen::to_value(&error)?),
-        }
-    }
-}
-
 
 impl Parser {
     /// Internal grammar checks.
@@ -368,8 +296,8 @@ impl Parser {
                 },
                 Action::Reduce { rule_index } => {
                     let rule = &self.grammar.rules()[rule_index];
-                    let pattern_length = rule.pattern().len();
-
+                    let pattern_length =
+                        if rule.is_the_empty_rule() { 0 } else { rule.pattern().len() };
                     let symbol = rule.symbol().clone();
                     let pattern =
                         tree_stack.split_off(tree_stack.len().saturating_sub(pattern_length));
@@ -378,7 +306,6 @@ impl Parser {
 
                     let new_state_stack_len = state_stack.len().saturating_sub(pattern_length);
                     state_stack.truncate(new_state_stack_len);
-
                     let new_state = *state_stack.last().unwrap();
                     match self.goto_table()[new_state].get(rule.symbol()) {
                         Some(state) => {
@@ -393,7 +320,6 @@ impl Parser {
         }
     }
 }
-
 
 impl Parser {
     /// Dumps the parser to stdout.
@@ -656,6 +582,84 @@ impl Parser {
             }
 
             pretty_parsing_tables.printstd()
+        }
+    }
+}
+
+#[cfg(feature = "wasm")]
+#[cfg_attr(feature = "wasm", wasm_bindgen)]
+impl Parser {
+    pub fn new_wasm(grammar: Grammar) -> Result<Parser, WasmParserError> {
+        Parser::lr(grammar).map_err(WasmParserError::new)
+    }
+    pub fn new_lalr_wasm(grammar: Grammar) -> Result<Parser, WasmParserError> {
+        Parser::lalr(grammar).map_err(WasmParserError::new)
+    }
+}
+
+#[cfg(feature = "wasm")]
+#[cfg_attr(feature = "wasm", wasm_bindgen)]
+impl Parser {
+    pub fn first_table_wasm(&self) -> Result<JsValue, JsValue> {
+        Ok(serde_wasm_bindgen::to_value(&self.first_table)?)
+    }
+
+    pub fn follow_table_wasm(&self) -> Result<JsValue, JsValue> {
+        Ok(serde_wasm_bindgen::to_value(&self.follow_table)?)
+    }
+
+    pub fn automaton_wasm(&self) -> Result<JsValue, JsValue> {
+        Ok(serde_wasm_bindgen::to_value(&self.automaton)?)
+    }
+
+    pub fn parsing_tables_wasm(&self) -> Result<JsValue, JsValue> {
+        Ok(serde_wasm_bindgen::to_value(&self.parsing_tables)?)
+    }
+
+    pub fn action_table_wasm(&self) -> Result<JsValue, JsValue> {
+        Ok(serde_wasm_bindgen::to_value(&self.parsing_tables.action_table())?)
+    }
+
+    pub fn goto_table_wasm(&self) -> Result<JsValue, JsValue> {
+        Ok(serde_wasm_bindgen::to_value(&self.parsing_tables.goto_table())?)
+    }
+}
+
+#[cfg(feature = "wasm")]
+#[cfg_attr(feature = "wasm", wasm_bindgen)]
+impl Parser {
+    pub fn tokenize_wasm(&self, input: &str) -> Result<JsValue, JsValue> {
+        match self.tokenize(input) {
+            Ok(tokens) => Ok(serde_wasm_bindgen::to_value(&tokens)?),
+            Err(error) => Err(serde_wasm_bindgen::to_value(&error)?),
+        }
+    }
+
+    pub fn parse_wasm(&self, input: &str) -> Result<JsValue, JsValue> {
+        let tokens = self.tokenize(input);
+        let tokens = match tokens {
+            Ok(tokens) => tokens,
+            Err(error) => return Err(serde_wasm_bindgen::to_value(&error)?),
+        };
+        match self.parse(tokens) {
+            Ok(tree) => Ok(serde_wasm_bindgen::to_value(&tree)?),
+            Err(error) => Err(serde_wasm_bindgen::to_value(&error)?),
+        }
+    }
+
+    pub fn trace_wasm(&self, input: &str) -> Result<Vec<JsValue>, JsValue> {
+        let tokens = self.tokenize(input);
+        let tokens = match tokens {
+            Ok(tokens) => tokens,
+            Err(error) => return Err(serde_wasm_bindgen::to_value(&error)?),
+        };
+        match self.trace(tokens) {
+            Ok((trace, tree)) => {
+                let trace = serde_wasm_bindgen::to_value(&trace)?;
+                let tree = serde_wasm_bindgen::to_value(&tree)?;
+                Ok(vec![trace, tree])
+            },
+            Err(error) => Err(serde_wasm_bindgen::to_value(&error)?),
         }
     }
 }

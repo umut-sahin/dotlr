@@ -6,8 +6,12 @@ use dotlr::{
     Parser,
 };
 
+#[cfg(target_family = "wasm")]
+use wasm_bindgen_test::*;
+
 
 #[test]
+#[cfg_attr(target_family = "wasm", wasm_bindgen_test)]
 fn raising_correct_error_when_encountering_unknown_token_during_parsing_calculator_grammar() {
     let grammar = Grammar::parse(common::grammars::CALCULATOR).unwrap();
     let parser = Parser::lr(grammar).unwrap();
@@ -17,6 +21,7 @@ fn raising_correct_error_when_encountering_unknown_token_during_parsing_calculat
 }
 
 #[test]
+#[cfg_attr(target_family = "wasm", wasm_bindgen_test)]
 fn raising_correct_error_when_encountering_unexpected_token_during_parsing_calculator_grammar() {
     let grammar = Grammar::parse(common::grammars::CALCULATOR).unwrap();
     let parser = Parser::lr(grammar).unwrap();
@@ -27,6 +32,7 @@ fn raising_correct_error_when_encountering_unexpected_token_during_parsing_calcu
 }
 
 #[test]
+#[cfg_attr(target_family = "wasm", wasm_bindgen_test)]
 fn raising_correct_error_when_encountering_unexpected_eof_during_parsing_calculator_grammar() {
     let grammar = Grammar::parse(common::grammars::CALCULATOR).unwrap();
     let parser = Parser::lr(grammar).unwrap();
@@ -41,6 +47,7 @@ fn raising_correct_error_when_encountering_unexpected_eof_during_parsing_calcula
 
 
 #[test]
+#[cfg_attr(target_family = "wasm", wasm_bindgen_test)]
 fn correctly_trace_parsing_of_calculator_grammar() {
     let grammar = Grammar::parse(common::grammars::CALCULATOR).unwrap();
     let parser = Parser::lr(grammar).unwrap();
@@ -166,6 +173,7 @@ Expr
 }
 
 #[test]
+#[cfg_attr(target_family = "wasm", wasm_bindgen_test)]
 fn correctly_parsing_conditional_grammar() {
     let grammar = Grammar::parse(common::grammars::CONDITIONAL).unwrap();
     let parser = Parser::lr(grammar).unwrap();
@@ -200,6 +208,7 @@ Conditional
 }
 
 #[test]
+#[cfg_attr(target_family = "wasm", wasm_bindgen_test)]
 fn correctly_parsing_json_grammar_with_lalr() {
     let grammar = Grammar::parse(common::grammars::JSON).unwrap();
     let parser = Parser::lalr(grammar).unwrap();
