@@ -296,8 +296,8 @@ impl Parser {
                 },
                 Action::Reduce { rule_index } => {
                     let rule = &self.grammar.rules()[rule_index];
-                    let pattern_length = rule.pattern().len();
-
+                    let pattern_length =
+                        if rule.is_the_empty_rule() { 0 } else { rule.pattern().len() };
                     let symbol = rule.symbol().clone();
                     let pattern =
                         tree_stack.split_off(tree_stack.len().saturating_sub(pattern_length));
@@ -306,7 +306,6 @@ impl Parser {
 
                     let new_state_stack_len = state_stack.len().saturating_sub(pattern_length);
                     state_stack.truncate(new_state_stack_len);
-
                     let new_state = *state_stack.last().unwrap();
                     match self.goto_table()[new_state].get(rule.symbol()) {
                         Some(state) => {

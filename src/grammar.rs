@@ -205,6 +205,11 @@ impl Rule {
     pub fn pattern(&self) -> &[AtomicPattern] {
         &self.pattern
     }
+
+    /// Checks if this rule contains only the Empty token
+    pub fn is_the_empty_rule(&self) -> bool {
+        self.pattern.len() == 1 && self.pattern[0] == AtomicPattern::Token(Token::Empty)
+    }
 }
 
 impl Display for Rule {

@@ -214,7 +214,8 @@ impl ParsingTables {
             let mut gotos = IndexMap::<Symbol, usize>::new();
 
             for item in state.items() {
-                if item.dot() == item.rule().pattern().len() {
+                let pattern = item.rule().pattern();
+                if item.dot() == pattern.len() || item.rule().is_the_empty_rule() {
                     if let Some(follows) = follow_table.get(item.rule().symbol()) {
                         let rule_index =
                             grammar.rules().iter().position(|rule| rule == item.rule()).unwrap();
