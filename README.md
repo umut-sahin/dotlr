@@ -30,6 +30,7 @@
   * [5) Constructing ACTION and GOTO tables](#5-constructing-action-and-goto-tables)
   * [6) Tokenizing the input](#6-tokenizing-the-input)
   * [7) Parsing the tokens](#7-parsing-the-tokens)
+* [Can I have symbols that can match to empty string?](#can-i-have-symbols-that-can-match-to-empty-string)
 * [Can I have an LALR(1) parser instead of an LR(1) parser?](#can-i-have-an-lalr1-parser-instead-of-an-lr1-parser)
 * [Any benchmarks?](#any-benchmarks)
 * [Can I modify it?](#can-i-modify-it)
@@ -266,7 +267,7 @@ Yes, you can depend on the `dotlr` crate from [crates.io](https://crates.io/crat
 Paste the following to your `dependencies` section of your `Cargo.toml`:
 
 ```toml
-dotlr = { version = "0.1", default-features = false }
+dotlr = { version = "0.3", default-features = false }
 ```
 
 ### Example
@@ -366,8 +367,7 @@ And then do a step-by-step explanation of the parsing steps for the following in
 Few notes before starting:
 
 - `$` represents the end of input token
-- symbols that can expand to empty string are not supported in `dotlr`,
-  which simplifies the explanations below (i.e., no rules like `S ->`)
+- `ε` represents the empty token
 
 ### 1) Parsing the grammar
 
@@ -382,6 +382,10 @@ The grammar object will consist of:
 - **start_symbol (Symbol):**
   - The symbol to parse \
     (e.g., `E`)
+
+- **empty_symbols (HashSet<Symbol>):**
+  - The set of symbols that can expand to empty string (i.e., `∀S: S -> '' ∈ rules`) \
+    (e.g., `T`)
 
 - **constant_tokens (HashSet<ConstantToken>):**
   - The set of constant tokens in the grammar \
@@ -404,9 +408,16 @@ Now, we need to compute a set of tokens for each symbol in the grammar according
 following constraints:
 
 - For each `token ∈ FIRST(Symbol)`, at least one of the following conditions must hold:
-  - `Symbol -> token ... ∈ grammar.rules`
-  - `Symbol -> AnotherSymbol ... ∈ grammar.rules` **and** \
-    `token ∈ FIRST(AnotherSymbol)`
+  - `Symbol -> '' ∈ grammar.rules`
+    **and** `token == ε`
+
+  - `Symbol -> (EmptySymbol1 ... EmptySymbolN) ∈ grammar.rules`
+    **and** `token == ε`
+
+  - `Symbol -> (EmptySymbol1 ... EmptySymbolN) token ... ∈ grammar.rules`
+
+  - `Symbol -> (EmptySymbol1 ... EmptySymbolN) NonEmptySymbol ... ∈ grammar.rules`
+    **and** `token ∈ FIRST(NonEmptySymbol)`
 
 As for the implementation, here is a python-like pseudocode of the algorithm to compute FIRST sets:
 
@@ -418,20 +429,47 @@ first_sets = {}
 while first_sets.has_changed():
     # Iterate over the rules of the grammar
     for rule in grammar:
-        # If pattern of the rule starts with a token
-        if rule.pattern[0].is_token:
-            # S -> '+' ... <==> S can start with '+'
-            # --------------------------------------
-            # Add the matching token to the FIRST set of the symbol of the rule
-            first_sets[rule.symbol].add(rule.pattern[0])
+        # If rule is empty pattern
+        if rule.is_empty_pattern:
+            # S -> '' <==> S can start with ε
+            # -------------------------------
+            # Add ε to the FIRST set of the symbol of the rule
+            first_sets[rule.symbol].add(ε)
+            # Break the processing of the rule as it's fully processed
+            break
 
-        # If pattern of the rule starts with a symbol
-        elif rule.pattern[0].is_symbol:
-            # S -> E ... <==> S can start with anything E can start with
-            # ----------------------------------------------------------
-            # Add every token in the FIRST set of the matching symbol
-            # to the FIRST set of the symbol of the rule
-            first_sets[rule.symbol].extend(first_sets[rule.pattern[0]])
+        # Iterate over the atoms of the pattern of the rule
+        for atom in rule.pattern:
+            # If atom is a token
+            if atom.is_token:
+                # S -> (EmptySymbol1 ... EmptySymbolN) '+' ... <==> S can start with '+'
+                # ----------------------------------------------------------------------
+                # Add the matching token to the FIRST set of the symbol of the rule
+                first_sets[rule.symbol].add(atom)
+                # Break the processing of the rule
+                # as the rule cannot provide any other first tokens
+                break
+
+            # If atom is a symbol
+            elif atom.is_symbol:
+                # S -> (EmptySymbol1 ... EmptySymbolN) E ... <==> S can start with anything E can start with
+                # ------------------------------------------------------------------------------------------
+                # Add every token in the FIRST set of the matching symbol
+                # to the FIRST set of the symbol except ε as it's treated
+                # in a special way through the loop
+                first_sets[rule.symbol].extend(first_sets[atom].exclude(ε))
+                # If the symbol cannot be empty (E -> '' ∉ grammar.rules)
+                if not atom.can_be_empty:
+                    # Break the processing of the rule
+                    # as the rule cannot provide any other first tokens
+                    break
+
+        # If the loop is not broken manually
+        else:
+            # S -> EmptySymbol1 ... EmptySymbolN <==> S can start with 'ε'
+            # -------------------------------------------------------------
+            # Add ε to the FIRST set of the symbol of the rule
+            first_sets[rule.symbol].add(ε)
 ```
 
 This is done in [src/tables.rs](https://github.com/umut-sahin/dotlr/blob/main/src/tables.rs).
@@ -456,16 +494,20 @@ Next, we need to compute another set of tokens for each symbol in the grammar ac
 following constraints:
 
 - For each `token ∈ FOLLOW(Symbol)`, at least one of the following conditions must hold:
-  - `Symbol == grammar.start_symbol` **and** \
-    `token == $`
+  - `Symbol == grammar.start_symbol`
+    **and** `token == $`
 
-  - `Anything -> ... Symbol token ... ∈ grammar.rules`
+  - `Anything -> ... Symbol (EmptySymbol1 ... EmptySymbolN) token ... ∈ grammar.rules`
 
-  - `Anything -> ... Symbol AnotherSymbol ... ∈ grammar.rules` **and** \
-    `token ∈ FIRST(AnotherSymbol)`
+  - `Anything -> ... Symbol (EmptySymbol1 ... EmptySymbolN) AnotherSymbol ... ∈ grammar.rules`
+    **and** `token ∈ FIRST(AnotherSymbol)`
+    **and** `token != ε`
 
-  - `Symbol -> ... AnotherSymbol ∈ grammar.rules` **and** \
-    `token ∈ FOLLOW(AnotherSymbol)`
+  - `AnotherSymbol -> ... Symbol (EmptySymbol1 ... EmptySymbolN) ∈ grammar.rules`
+    **and** `token ∈ FOLLOW(AnotherSymbol)`
+
+  - `Symbol -> ... AnotherSymbol ∈ grammar.rules`
+    **and** `token ∈ FOLLOW(AnotherSymbol)`
 
 As for the implementation, here is a python-like pseudocode of the algorithm to compute FOLLOW sets:
 
@@ -477,30 +519,49 @@ follow_sets = { grammar.start_symbol: { $ } }
 while follow_sets.has_changed():
     # Iterate over the rules of the grammar
     for rule in grammar:
-        # Iterate over the 2-windows of the pattern of the rule
+        # Iterate over the atoms of the pattern of the rule
         for i in range(len(rule.pattern) - 1):
-            # If the first atomic pattern is a symbol
+            # If the atom is a symbol
             if rule.pattern[i].is_symbol:
-                # And if the second atomic pattern is a token
-                if rule.pattern[i + 1].is_token:
-                    # S -> ... E '+' ... <==> E can follow '+'
-                    # ----------------------------------------
-                    # Add the matching token to the FOLLOW set of the matching symbol
-                    follow_sets[rule.pattern[i]].add(rule.pattern[i + 1])
+                # Iterate over the remaining atoms
+                for j in range(i + 1, len(rule.pattern)):
+                    # If the next atom is a token
+                    if rule.pattern[j].is_token:
+                        # S -> ... E (EmptySymbol1 ... EmptySymbolN) '+' ... <==> E can follow '+'
+                        # ------------------------------------------------------------------------
+                        # Add the matching token to the FOLLOW set of the matching symbol
+                        follow_sets[rule.pattern[i]].add(rule.pattern[j])
+                        # Break the processing of the rule
+                        # as the rule cannot provide any other follow tokens
+                        break
 
-                # Or if the second atomic pattern is a symbol
-                elif rule.pattern[i + 1].is_symbol:
-                    # S -> ... E F ... <==> E can follow anything F can start with
-                    # ------------------------------------------------------------
-                    # Add every token in the FIRST set of the second symbol
-                    # to the FOLLOW set of the first symbol
-                    follow_sets[rule.pattern[i]].extend(first_sets[rule.pattern[i + 1]])
+                    # Or if the next atom is a symbol
+                    elif rule.pattern[j].is_symbol:
+                        # S -> ... E (EmptySymbol1 ... EmptySymbolN) F ... <==> E can follow anything F can start with
+                        # --------------------------------------------------------------------------------------------
+                        # Add every token in the FIRST set of the second symbol
+                        # to the FOLLOW set of the first symbol
+                        # except ε as it's shouldn't be in the follow set
+                        follow_sets[rule.pattern[i]].extend(first_sets[rule.pattern[j]].exclude(ε))
+                        # If the symbol cannot be empty (F -> '' ∉ grammar.rules)
+                        if not rule.pattern[j].can_be_empty:
+                            # Break the processing of the rule
+                            # as the rule cannot provide any other follow tokens
+                            break
+
+                # If the loop is not broken manually
+                else:
+                    # A -> ... S (EmptySymbol1 ... EmptySymbolN) <==> S can follow anything A can follow
+                    # ----------------------------------------------------------------------------------
+                    # Add every token in the FOLLOW set of the symbol of the rule
+                    # to the FOLLOW set of the symbol of the atom
+                    follow_sets[rule.patten[i]].extend(follow_sets[rule.symbol])
 
         # If pattern of ends with a symbol
         if rule.pattern[-1].is_symbol:
             # S -> ... E <==> S can follow anything E can follow
             # --------------------------------------------------
-            # Add every token in the FOLLOW set of the matching symbol
+            # Add every token in the FOLLOW set of the symbol of the last atom
             # to the FOLLOW set of the symbol of the rule
             follow_sets[rule.symbol].extend(follow_sets[rule.patten[-1]])
 ```
@@ -648,21 +709,31 @@ while len(states_to_process) > 0:
 
     # Compute transitions of from the state to process.
     for item in state_to_process.items:
+        # If the rule of the items is empty pattern
+        if item.rule.is_empty_pattern:
+            # S -> . ε <==> No need to create a transition to item  S -> ε .
+            # --------------------------------------------------------------
+            continue
+
         # If dot is not at the end
-        if item.dot != len(item.rule.pattern):
-            # S -> ... . E ... <==> Seeing E would cause a transition to another state
-            # S -> ... . '+' ... <==> Seeing '+' would cause a transition to another state
-            # ----------------------------------------------------------------------------
-            atomic_pattern_after_dot = item.rule.pattern[item.dot]
+        if item.dot == len(item.rule.pattern):
+            # S -> ... . <==> Can't create a transition as the dot is already at the end
+            # --------------------------------------------------------------------------
+            continue
 
-            # If state to transition is not created yet, create an empty state for it.
-            if atomic_pattern_after_dot is not in transitions:
-                # Create an empty state to transition to
-                state_to_process.transitions[atomic_pattern_after_dot] = next_empty_state()
+        # S -> ... . E ... <==> Seeing E would cause a transition to another state
+        # S -> ... . '+' ... <==> Seeing '+' would cause a transition to another state
+        # ----------------------------------------------------------------------------
+        atomic_pattern_after_dot = item.rule.pattern[item.dot]
 
-            # Setup the kernel of the state to transition
-            state_to_transition = state_to_process.transitions[atomic_pattern_after_dot]
-            state_to_transition.items.push(item.shift_dot_to_right())
+        # If state to transition is not created yet, create an empty state for it.
+        if atomic_pattern_after_dot is not in transitions:
+            # Create an empty state to transition to
+            state_to_process.transitions[atomic_pattern_after_dot] = next_empty_state()
+
+        # Setup the kernel of the state to transition
+        state_to_transition = state_to_process.transitions[atomic_pattern_after_dot]
+        state_to_transition.items.push(item.shift_dot_to_right())
 
     # Add state to process to processed states, as we're done with it
     processed_states.push(state_to_process)
@@ -720,7 +791,18 @@ Finally, we can compute ACTION and GOTO tables of the parser according the follo
     `item.rule.symbol == grammar.start_symbol` **and** \
     `action == Accept(item.rule)`
 
+  - `Anything -> . ε | lookahead ∈ state.items` **and** \
+    `token ∈ lookahead` **and** \
+    `token == $` **and** \
+    `item.rule.symbol == grammar.start_symbol` **and** \
+    `action == Accept(item.rule)`
+
   - `Anything -> ... . | lookahead ∈ state.items` **and** \
+    `token ∈ lookahead` **and** \
+    (`token != $` **or** `item.rule.symbol != grammar.start_symbol`) **and** \
+    `action == Reduce(item.rule)`
+
+  - `Anything -> . ε | lookahead ∈ state.items` **and** \
     `token ∈ lookahead` **and** \
     (`token != $` **or** `item.rule.symbol != grammar.start_symbol`) **and** \
     `action == Reduce(item.rule)`
@@ -741,9 +823,10 @@ goto_table = {}
 for state in automaton.states:
     # Iterate over the items of the state
     for item in state.items:
-        # If dot is at the end of the item
-        if item.dot == len(item.rule.pattern):
+        # If dot is at the end of the item or rule of the item is empty pattern
+        if item.dot == len(item.rule.pattern) or item.rule.is_empty_pattern:
             # S -> ... . <==> We can either reduce the rule or accept if S is a start symbol
+            # S -> . ε <==> We can either reduce the rule or accept if S is a start symbol
             # ------------------------------------------------------------------------------
 
             # We can only perform actions for the tokens in the follow set of the symbol of the rule
@@ -965,6 +1048,113 @@ E
    ├─ *
    └─ T
       └─ 1
+```
+
+## Can I have symbols that can match to empty string?
+
+Yes, empty symbols are supported!
+
+In the grammar definition, you can have rules like `P -> ''`
+to indicate that `P` can match the empty string.
+
+```
+P -> 'x' O 'z'
+
+O -> 'y'
+O -> ''
+```
+
+When used as the sole pattern, `''` will indicate mark the symbol as `can be empty`.
+However, using `''` anywhere else would be ignored (e.g., `P -> A '' B` would be parsed as `P -> A B`).
+
+The grammar above will be able to parse both `x y z` and `x z`.
+
+```
++----------------------+
+|       Grammar        |
++----------------------+
+|  1)  P -> 'x' O 'z'  |
+|  2)  O -> 'y'        |
+|  3)  O -> ε          |
++----------------------+
++--------+------------+------------+
+| Symbol | First Set  | Follow Set |
++--------+------------+------------+
+| P      | { 'x' }    | { $ }      |
++--------+------------+------------+
+| O      | { 'y', ε } | { 'z' }    |
++--------+------------+------------+
++-------+--------------------+------------+--------------+
+| State |       Items        | Lookaheads | Transitions  |
++-------+--------------------+------------+--------------+
+| 0     |  P -> . 'x' O 'z'  | { $ }      |  'x'  ->  1  |
++-------+--------------------+------------+--------------+
+| 1     |  P -> 'x' . O 'z'  | { $ }      |   O   ->  2  |
+|       |  O -> . 'y'        | { 'z' }    |  'y'  ->  3  |
+|       |  O -> . ε          | { 'z' }    |              |
++-------+--------------------+------------+--------------+
+| 2     |  P -> 'x' O . 'z'  | { $ }      |  'z'  ->  4  |
++-------+--------------------+------------+--------------+
+| 3     |  O -> 'y' .        | { 'z' }    |              |
++-------+--------------------+------------+--------------+
+| 4     |  P -> 'x' O 'z' .  | { $ }      |              |
++-------+--------------------+------------+--------------+
++-------+--------------------------------+--------------+
+|       |             Action             |     Goto     |
+| State | ------------------------------ | ------------ |
+|       |    'x'    'z'    'y'     $     |    P    O    |
++-------+--------------------------------+--------------+
+| 0     |    s1      -      -      -     |    -    -    |
++-------+--------------------------------+--------------+
+| 1     |     -     r3     s3      -     |    -    2    |
++-------+--------------------------------+--------------+
+| 2     |     -     s4      -      -     |    -    -    |
++-------+--------------------------------+--------------+
+| 3     |     -     r2      -      -     |    -    -    |
++-------+--------------------------------+--------------+
+| 4     |     -      -      -     a1     |    -    -    |
++-------+--------------------------------+--------------+
+
+> x y z
+
+P
+├─ x
+├─ O
+│  └─ y
+└─ z
+
++------+-------------+--------------+-----------------+---------------------------+
+| Step | State Stack | Symbol Stack | Remaining Input |       Action Taken        |
++------+-------------+--------------+-----------------+---------------------------+
+| 0    | 0           |              |   'x' 'y' 'z' $ | Shift 1                   |
++------+-------------+--------------+-----------------+---------------------------+
+| 1    | 0 1         | 'x'          |       'y' 'z' $ | Shift 3                   |
++------+-------------+--------------+-----------------+---------------------------+
+| 2    | 0 1 3       | 'x' 'y'      |           'z' $ | Reduce 2 (O -> 'y')       |
++------+-------------+--------------+-----------------+---------------------------+
+| 3    | 0 1 2       | 'x' O        |           'z' $ | Shift 4                   |
++------+-------------+--------------+-----------------+---------------------------+
+| 4    | 0 1 2 4     | 'x' O 'z'    |               $ | Accept 1 (P -> 'x' O 'z') |
++------+-------------+--------------+-----------------+---------------------------+
+
+> x z
+
+P
+├─ x
+├─ O
+└─ z
+
++------+-------------+--------------+-----------------+---------------------------+
+| Step | State Stack | Symbol Stack | Remaining Input |       Action Taken        |
++------+-------------+--------------+-----------------+---------------------------+
+| 0    | 0           |              |       'x' 'z' $ | Shift 1                   |
++------+-------------+--------------+-----------------+---------------------------+
+| 1    | 0 1         | 'x'          |           'z' $ | Reduce 3 (O -> ε)         |
++------+-------------+--------------+-----------------+---------------------------+
+| 2    | 0 1 2       | 'x' O        |           'z' $ | Shift 4                   |
++------+-------------+--------------+-----------------+---------------------------+
+| 3    | 0 1 2 4     | 'x' O 'z'    |               $ | Accept 1 (P -> 'x' O 'z') |
++------+-------------+--------------+-----------------+---------------------------+
 ```
 
 ## Can I have an LALR(1) parser instead of an LR(1) parser?
