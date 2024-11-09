@@ -93,6 +93,8 @@ fn raising_correct_error_when_creating_parser_for_shift_reduce_conflict_grammar(
         }
 
         assert!(has_shift_action && has_reduce_action);
+    } else {
+        panic!("unexpected parser error {:?}", error);
     }
 }
 
@@ -117,6 +119,8 @@ fn raising_correct_error_when_creating_parser_for_reduce_reduce_conflict_grammar
         }
 
         assert!(reduce_action_count >= 2);
+    } else {
+        panic!("unexpected parser error {:?}", error);
     }
 }
 
@@ -134,6 +138,8 @@ fn raising_correct_error_when_creating_lalr_parser_for_non_lalr_grammar() {
         assert!(possible_actions.is_some());
 
         assert!(possible_actions.unwrap().len() >= 2);
+    } else {
+        panic!("unexpected parser error {:?}", error);
     }
 }
 
@@ -1474,6 +1480,503 @@ T -> %id
                     ],
                 ),
                 // State 8
+                IndexMap::<Symbol, usize>::from_iter(
+                    [
+                    ],
+                ),
+            ]
+        );
+    }
+}
+
+#[test]
+#[cfg_attr(target_family = "wasm", wasm_bindgen_test)]
+fn correctly_creating_lr_parser_for_optional_grammar() {
+    let grammar = Grammar::parse(common::grammars::OPTIONAL).unwrap();
+    let parser = Parser::lr(grammar).unwrap();
+
+    assert_eq!(
+        parser.grammar().to_string().trim(),
+        r#"
+
+P -> O 'x' O 'z'
+O -> 'y'
+O -> ε
+
+        "#
+        .trim()
+    );
+
+    let first_table = parser.first_table();
+    {
+        // +--------+--------------+
+        // | Symbol |  First Set   |
+        // +--------+--------------+
+        // | P      | { 'x', 'y' } |
+        // +--------+--------------+
+        // | O      | { 'y', ε }   |
+        // +--------+--------------+
+
+        #[rustfmt::skip]
+        assert_eq!(
+            *first_table.deref(),
+            [
+                (
+                    Symbol::from("P"),
+                    [
+                        ConstantToken::from("x").into(),
+                        ConstantToken::from("y").into(),
+                    ]
+                        .into(),
+                ),
+                (
+                    Symbol::from("O"),
+                    [
+                        ConstantToken::from("y").into(),
+                        Token::Empty,
+                    ]
+                        .into(),
+                ),
+            ]
+                .into_iter()
+                .collect::<IndexMap<_, _>>()
+        );
+    }
+
+    let follow_table = parser.follow_table();
+    {
+        // +--------+--------------+
+        // | Symbol |  Follow Set  |
+        // +--------+--------------+
+        // | P      | { $ }        |
+        // +--------+--------------+
+        // | O      | { 'x', 'z' } |
+        // +--------+--------------+
+
+        #[rustfmt::skip]
+        assert_eq!(
+            *follow_table.deref(),
+            [
+                (
+                    Symbol::from("P"),
+                    [
+                        Token::Eof,
+                    ]
+                        .into(),
+                ),
+                (
+                    Symbol::from("O"),
+                    [
+                        ConstantToken::from("x").into(),
+                        ConstantToken::from("z").into(),
+                    ]
+                        .into(),
+                ),
+            ]
+                .into_iter()
+                .collect::<IndexMap<_, _>>()
+        );
+    }
+
+    let automaton = parser.automaton();
+    {
+        // +-------+----------------------+------------+--------------+
+        // | State |        Items         | Lookaheads | Transitions  |
+        // +-------+----------------------+------------+--------------+
+        // | 0     |  P -> . O 'x' O 'z'  | { $ }      |   O   ->  1  |
+        // |       |  O -> . 'y'          | { 'x' }    |  'y'  ->  2  |
+        // |       |  O -> . ε            | { 'x' }    |              |
+        // +-------+----------------------+------------+--------------+
+        // | 1     |  P -> O . 'x' O 'z'  | { $ }      |  'x'  ->  3  |
+        // +-------+----------------------+------------+--------------+
+        // | 2     |  O -> 'y' .          | { 'x' }    |              |
+        // +-------+----------------------+------------+--------------+
+        // | 3     |  P -> O 'x' . O 'z'  | { $ }      |   O   ->  4  |
+        // |       |  O -> . 'y'          | { 'z' }    |  'y'  ->  5  |
+        // |       |  O -> . ε            | { 'z' }    |              |
+        // +-------+----------------------+------------+--------------+
+        // | 4     |  P -> O 'x' O . 'z'  | { $ }      |  'z'  ->  6  |
+        // +-------+----------------------+------------+--------------+
+        // | 5     |  O -> 'y' .          | { 'z' }    |              |
+        // +-------+----------------------+------------+--------------+
+        // | 6     |  P -> O 'x' O 'z' .  | { $ }      |              |
+        // +-------+----------------------+------------+--------------+
+
+        #[rustfmt::skip]
+        assert_eq!(
+            automaton.states(),
+            [
+                // State 0
+                State::new(
+                    0,
+                    [
+                        // P -> . O 'x' O 'z' | { $ }
+                        Item::new(
+                            Rule::new(
+                                "P",
+                                [
+                                    Symbol::from("O").into(),
+                                    ConstantToken::from("x").into(),
+                                    Symbol::from("O").into(),
+                                    ConstantToken::from("z").into(),
+                                ]
+                            ),
+                            0,
+                            [Token::Eof],
+                        ),
+                        // O -> . 'y' | { 'x' }
+                        Item::new(
+                            Rule::new(
+                                "O",
+                                [
+                                    ConstantToken::from("y").into(),
+                                ]
+                            ),
+                            0,
+                            [ConstantToken::from("x").into()],
+                        ),
+                        // O -> . ε | { 'x' }
+                        Item::new(
+                            Rule::new(
+                                "O",
+                                [
+                                    Token::Empty.into(),
+                                ]
+                            ),
+                            0,
+                            [ConstantToken::from("x").into()],
+                        ),
+                    ],
+                    [
+                        // O -> 1
+                        (Symbol::from("O").into(), 1),
+                        // 'y' -> 2
+                        (ConstantToken::from("y").into(), 2),
+                    ],
+                ),
+
+                // State 1
+                State::new(
+                    1,
+                    [
+                        // P -> O . 'x' O 'z' | { $ }
+                        Item::new(
+                            Rule::new(
+                                "P",
+                                [
+                                    Symbol::from("O").into(),
+                                    ConstantToken::from("x").into(),
+                                    Symbol::from("O").into(),
+                                    ConstantToken::from("z").into(),
+                                ]
+                            ),
+                            1,
+                            [Token::Eof],
+                        ),
+                    ],
+                    [
+                        // 'x' -> 2
+                        (ConstantToken::from("x").into(), 3),
+                    ],
+                ),
+
+                // State 2
+                State::new(
+                    2,
+                    [
+                        // O -> 'y' . | { 'x' }
+                        Item::new(
+                            Rule::new(
+                                "O",
+                                [
+                                    ConstantToken::from("y").into(),
+                                ]
+                            ),
+                            1,
+                            [ConstantToken::from("x").into()],
+                        ),
+                    ],
+                    [],
+                ),
+
+                // State 3
+                State::new(
+                    3,
+                    [
+                        // P -> O 'x' . O 'z' | { $ }
+                        Item::new(
+                            Rule::new(
+                                "P",
+                                [
+                                    Symbol::from("O").into(),
+                                    ConstantToken::from("x").into(),
+                                    Symbol::from("O").into(),
+                                    ConstantToken::from("z").into(),
+                                ]
+                            ),
+                            2,
+                            [Token::Eof],
+                        ),
+                        // O -> . 'y' | { 'z' }
+                        Item::new(
+                            Rule::new(
+                                "O",
+                                [
+                                    ConstantToken::from("y").into(),
+                                ]
+                            ),
+                            0,
+                            [ConstantToken::from("z").into()],
+                        ),
+                        // O -> . ε | { 'z' }
+                        Item::new(
+                            Rule::new(
+                                "O",
+                                [
+                                    Token::Empty.into(),
+                                ]
+                            ),
+                            0,
+                            [ConstantToken::from("z").into()],
+                        ),
+                    ],
+                    [
+                        // O -> 4
+                        (Symbol::from("O").into(), 4),
+                        // 'y' -> 5
+                        (ConstantToken::from("y").into(), 5),
+                    ],
+                ),
+
+                // State 4
+                State::new(
+                    4,
+                    [
+                        // P -> O 'x' O . 'z' | { $ }
+                        Item::new(
+                            Rule::new(
+                                "P",
+                                [
+                                    Symbol::from("O").into(),
+                                    ConstantToken::from("x").into(),
+                                    Symbol::from("O").into(),
+                                    ConstantToken::from("z").into(),
+                                ]
+                            ),
+                            3,
+                            [Token::Eof],
+                        ),
+                    ],
+                    [
+                        // 'z' -> 6
+                        (ConstantToken::from("z").into(), 6),
+                    ],
+                ),
+
+                // State 5
+                State::new(
+                    5,
+                    [
+                        // O -> 'y' . | { 'z' }
+                        Item::new(
+                            Rule::new(
+                                "O",
+                                [
+                                    ConstantToken::from("y").into(),
+                                ]
+                            ),
+                            1,
+                            [ConstantToken::from("z").into()],
+                        ),
+                    ],
+                    [],
+                ),
+
+                // State 6
+                State::new(
+                    6,
+                    [
+                        // P -> O 'x' O 'z' . | { $ }
+                        Item::new(
+                            Rule::new(
+                                "P",
+                                [
+                                    Symbol::from("O").into(),
+                                    ConstantToken::from("x").into(),
+                                    Symbol::from("O").into(),
+                                    ConstantToken::from("z").into(),
+                                ]
+                            ),
+                            4,
+                            [Token::Eof],
+                        ),
+                    ],
+                    [],
+                ),
+            ]
+        );
+    }
+
+    let action_table = parser.action_table();
+    {
+        // +-------+--------------------------------+
+        // |       |             Action             |
+        // | State | ------------------------------ |
+        // |       |    'x'    'z'    'y'     $     |
+        // +-------+--------------------------------+
+        // | 0     |    r3      -     s2      -     |
+        // +-------+--------------------------------+
+        // | 1     |    s3      -      -      -     |
+        // +-------+--------------------------------+
+        // | 2     |    r2      -      -      -     |
+        // +-------+--------------------------------+
+        // | 3     |     -     r3     s5      -     |
+        // +-------+--------------------------------+
+        // | 4     |     -     s6      -      -     |
+        // +-------+--------------------------------+
+        // | 5     |     -     r2      -      -     |
+        // +-------+--------------------------------+
+        // | 6     |     -      -      -     a1     |
+        // +-------+--------------------------------+
+
+        #[rustfmt::skip]
+        assert_eq!(
+            action_table,
+            [
+                // State 0
+                IndexMap::<Token, IndexSet<Action>>::from_iter(
+                    [
+                        (
+                            ConstantToken::from("x").into(),
+                            IndexSet::from([Action::Reduce { rule_index: 2 }]),
+                        ),
+                        (
+                            ConstantToken::from("y").into(),
+                            IndexSet::from([Action::Shift { next_state: 2 }]),
+                        ),
+                    ],
+                ),
+                // State 1
+                IndexMap::<Token, IndexSet<Action>>::from_iter(
+                    [
+                        (
+                            ConstantToken::from("x").into(),
+                            IndexSet::from([Action::Shift { next_state: 3 }]),
+                        ),
+                    ],
+                ),
+                // State 2
+                IndexMap::<Token, IndexSet<Action>>::from_iter(
+                    [
+                        (
+                            ConstantToken::from("x").into(),
+                            IndexSet::from([Action::Reduce { rule_index: 1 }]),
+                        ),
+                    ],
+                ),
+                // State 3
+                IndexMap::<Token, IndexSet<Action>>::from_iter(
+                    [
+                        (
+                            ConstantToken::from("z").into(),
+                            IndexSet::from([Action::Reduce { rule_index: 2 }]),
+                        ),
+                        (
+                            ConstantToken::from("y").into(),
+                            IndexSet::from([Action::Shift { next_state: 5 }]),
+                        ),
+                    ],
+                ),
+                // State 4
+                IndexMap::<Token, IndexSet<Action>>::from_iter(
+                    [
+                        (
+                            ConstantToken::from("z").into(),
+                            IndexSet::from([Action::Shift { next_state: 6 }]),
+                        ),
+                    ],
+                ),
+                // State 5
+                IndexMap::<Token, IndexSet<Action>>::from_iter(
+                    [
+                        (
+                            ConstantToken::from("z").into(),
+                            IndexSet::from([Action::Reduce { rule_index: 1 }]),
+                        ),
+                    ],
+                ),
+                // State 6
+                IndexMap::<Token, IndexSet<Action>>::from_iter(
+                    [
+                        (
+                            Token::Eof,
+                            IndexSet::from([Action::Accept { rule_index: 0 }]),
+                        )
+                    ],
+                ),
+            ]
+        );
+    }
+
+    let goto_table = parser.goto_table();
+    {
+        // +-------+--------------+
+        // |       |     Goto     |
+        // | State | ------------ |
+        // |       |    P    O    |
+        // +-------+--------------+
+        // | 0     |    -    1    |
+        // +-------+--------------+
+        // | 1     |    -    -    |
+        // +-------+--------------+
+        // | 2     |    -    -    |
+        // +-------+--------------+
+        // | 3     |    -    4    |
+        // +-------+--------------+
+        // | 4     |    -    -    |
+        // +-------+--------------+
+        // | 5     |    -    -    |
+        // +-------+--------------+
+        // | 6     |    -    -    |
+        // +-------+--------------+
+
+        #[rustfmt::skip]
+        assert_eq!(
+            goto_table,
+            [
+                // State 0
+                IndexMap::<Symbol, usize>::from_iter(
+                    [
+                        (Symbol::from("O"), 1),
+                    ],
+                ),
+                // State 1
+                IndexMap::<Symbol, usize>::from_iter(
+                    [
+                    ],
+                ),
+                // State 2
+                IndexMap::<Symbol, usize>::from_iter(
+                    [
+                    ],
+                ),
+                // State 3
+                IndexMap::<Symbol, usize>::from_iter(
+                    [
+                        (Symbol::from("O"), 4),
+                    ],
+                ),
+                // State 4
+                IndexMap::<Symbol, usize>::from_iter(
+                    [
+                    ],
+                ),
+                // State 5
+                IndexMap::<Symbol, usize>::from_iter(
+                    [
+                    ],
+                ),
+                // State 6
                 IndexMap::<Symbol, usize>::from_iter(
                     [
                     ],
