@@ -155,14 +155,14 @@ export type Action = {
 }
 export type Span = {
   offset: number;
-  len: number;
+  length: number;
   column: number;
   line: number;
 };
 
 export type Spanned<T> = {
-  span: Span;
-  value: T;
+  span: Span
+  object: T;
 };
 
 export type FirstTable<T extends Token = Token> = Map<string, T[]>;
