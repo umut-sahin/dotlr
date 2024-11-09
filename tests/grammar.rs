@@ -3,6 +3,7 @@ mod common;
 use dotlr::{
     ConstantToken,
     Grammar,
+    GrammarError,
     RegexToken,
     Rule,
     Symbol,
@@ -10,6 +11,7 @@ use dotlr::{
 
 #[cfg(target_family = "wasm")]
 use wasm_bindgen_test::*;
+
 
 #[test]
 #[cfg_attr(target_family = "wasm", wasm_bindgen_test)]
@@ -36,7 +38,7 @@ fn failing_to_parse_syntactically_incorrect_grammars() {
 fn raising_correct_error_when_parsing_unexpected_token_grammar() {
     let error = Grammar::parse(common::grammars::UNEXPECTED_TOKEN).unwrap_err();
     match error {
-        dotlr::GrammarError::UnexpectedToken { line, column, token, expected } => {
+        GrammarError::UnexpectedToken { line, column, token, expected } => {
             assert_eq!(line, 1);
             assert_eq!(column, 6);
             assert_eq!(token.as_str(), "->");
@@ -46,7 +48,7 @@ fn raising_correct_error_when_parsing_unexpected_token_grammar() {
                 "regular expression token"
             ]);
         },
-        _ => unreachable!(),
+        error => panic!("unexpected grammar error {:?}", error),
     }
 }
 
@@ -55,12 +57,12 @@ fn raising_correct_error_when_parsing_unexpected_token_grammar() {
 fn raising_correct_error_when_parsing_invalid_regex_grammar() {
     let error = Grammar::parse(common::grammars::INVALID_REGEX).unwrap_err();
     match error {
-        dotlr::GrammarError::InvalidRegex { line, column, regex } => {
+        GrammarError::InvalidRegex { line, column, regex } => {
             assert_eq!(line, 3);
             assert_eq!(column, 8);
             assert_eq!(regex.as_str(), "/[1-9][0-9+/");
         },
-        _ => unreachable!(),
+        error => panic!("unexpected grammar error {:?}", error),
     }
 }
 

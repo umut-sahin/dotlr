@@ -309,3 +309,164 @@ Json
         .trim(),
     );
 }
+
+#[test]
+#[cfg_attr(target_family = "wasm", wasm_bindgen_test)]
+fn correctly_trace_parsing_of_optional_grammar() {
+    let grammar = Grammar::parse(common::grammars::OPTIONAL).unwrap();
+    let parser = Parser::lr(grammar).unwrap();
+
+    {
+        let expression = "x y z";
+        let tokens = parser.tokenize(expression).unwrap();
+
+        let (parse_trace, parse_tree) = parser.trace(tokens).unwrap();
+        {
+            // +------+-------------+--------------+-----------------+-----------------------------+
+            // | Step | State Stack | Symbol Stack | Remaining Input |        Action Taken         |
+            // +------+-------------+--------------+-----------------+-----------------------------+
+            // | 0    | 0           |              |   'x' 'y' 'z' $ | Reduce 3 (O -> ε)           |
+            // +------+-------------+--------------+-----------------+-----------------------------+
+            // | 1    | 0 1         | O            |   'x' 'y' 'z' $ | Shift 3                     |
+            // +------+-------------+--------------+-----------------+-----------------------------+
+            // | 2    | 0 1 3       | O 'x'        |       'y' 'z' $ | Shift 5                     |
+            // +------+-------------+--------------+-----------------+-----------------------------+
+            // | 3    | 0 1 3 5     | O 'x' 'y'    |           'z' $ | Reduce 2 (O -> 'y')         |
+            // +------+-------------+--------------+-----------------+-----------------------------+
+            // | 4    | 0 1 3 4     | O 'x' O      |           'z' $ | Shift 6                     |
+            // +------+-------------+--------------+-----------------+-----------------------------+
+            // | 5    | 0 1 3 4 6   | O 'x' O 'z'  |               $ | Accept 1 (P -> O 'x' O 'z') |
+            // +------+-------------+--------------+-----------------+-----------------------------+
+
+            assert_eq!(
+            parse_trace.steps().iter().map(|step| *step.action_taken()).collect::<Vec<_>>(),
+            [
+                Action::Reduce { rule_index: 2 },
+                Action::Shift { next_state: 3 },
+                Action::Shift { next_state: 5 },
+                Action::Reduce { rule_index: 1 },
+                Action::Shift { next_state: 6 },
+                Action::Accept { rule_index: 0 }
+            ],
+        );
+        }
+        {
+            assert_eq!(
+            parse_tree.to_string().trim(),
+            r#"
+
+P
+├─ O
+├─ x
+├─ O
+│  └─ y
+└─ z
+
+            "#
+            .trim(),
+        );
+        }
+    }
+    {
+        let expression = "x z";
+        let tokens = parser.tokenize(expression).unwrap();
+
+        let (parse_trace, parse_tree) = parser.trace(tokens).unwrap();
+        {
+            // +------+-------------+--------------+-----------------+-----------------------------+
+            // | Step | State Stack | Symbol Stack | Remaining Input |        Action Taken         |
+            // +------+-------------+--------------+-----------------+-----------------------------+
+            // | 0    | 0           |              |       'x' 'z' $ | Reduce 3 (O -> ε)           |
+            // +------+-------------+--------------+-----------------+-----------------------------+
+            // | 1    | 0 1         | O            |       'x' 'z' $ | Shift 3                     |
+            // +------+-------------+--------------+-----------------+-----------------------------+
+            // | 2    | 0 1 3       | O 'x'        |           'z' $ | Reduce 3 (O -> ε)           |
+            // +------+-------------+--------------+-----------------+-----------------------------+
+            // | 3    | 0 1 3 4     | O 'x' O      |           'z' $ | Shift 6                     |
+            // +------+-------------+--------------+-----------------+-----------------------------+
+            // | 4    | 0 1 3 4 6   | O 'x' O 'z'  |               $ | Accept 1 (P -> O 'x' O 'z') |
+            // +------+-------------+--------------+-----------------+-----------------------------+
+
+            assert_eq!(
+            parse_trace.steps().iter().map(|step| *step.action_taken()).collect::<Vec<_>>(),
+            [
+                Action::Reduce { rule_index: 2 },
+                Action::Shift { next_state: 3 },
+                Action::Reduce { rule_index: 2 },
+                Action::Shift { next_state: 6 },
+                Action::Accept { rule_index: 0 }
+            ],
+        );
+        }
+        {
+            assert_eq!(
+            parse_tree.to_string().trim(),
+            r#"
+
+P
+├─ O
+├─ x
+├─ O
+└─ z
+
+            "#
+            .trim(),
+        );
+        }
+    }
+    {
+        let expression = "y x y z";
+        let tokens = parser.tokenize(expression).unwrap();
+
+        let (parse_trace, parse_tree) = parser.trace(tokens).unwrap();
+        {
+            // +------+-------------+--------------+-------------------+-----------------------------+
+            // | Step | State Stack | Symbol Stack |  Remaining Input  |        Action Taken         |
+            // +------+-------------+--------------+-------------------+-----------------------------+
+            // | 0    | 0           |              | 'y' 'x' 'y' 'z' $ | Shift 2                     |
+            // +------+-------------+--------------+-------------------+-----------------------------+
+            // | 1    | 0 2         | 'y'          |     'x' 'y' 'z' $ | Reduce 2 (O -> 'y')         |
+            // +------+-------------+--------------+-------------------+-----------------------------+
+            // | 2    | 0 1         | O            |     'x' 'y' 'z' $ | Shift 3                     |
+            // +------+-------------+--------------+-------------------+-----------------------------+
+            // | 3    | 0 1 3       | O 'x'        |         'y' 'z' $ | Shift 5                     |
+            // +------+-------------+--------------+-------------------+-----------------------------+
+            // | 4    | 0 1 3 5     | O 'x' 'y'    |             'z' $ | Reduce 2 (O -> 'y')         |
+            // +------+-------------+--------------+-------------------+-----------------------------+
+            // | 5    | 0 1 3 4     | O 'x' O      |             'z' $ | Shift 6                     |
+            // +------+-------------+--------------+-------------------+-----------------------------+
+            // | 6    | 0 1 3 4 6   | O 'x' O 'z'  |                 $ | Accept 1 (P -> O 'x' O 'z') |
+            // +------+-------------+--------------+-------------------+-----------------------------+
+
+            assert_eq!(
+            parse_trace.steps().iter().map(|step| *step.action_taken()).collect::<Vec<_>>(),
+            [
+                Action::Shift { next_state: 2 },
+                Action::Reduce { rule_index: 1 },
+                Action::Shift { next_state: 3 },
+                Action::Shift { next_state: 5 },
+                Action::Reduce { rule_index: 1 },
+                Action::Shift { next_state: 6 },
+                Action::Accept { rule_index: 0 }
+            ],
+        );
+        }
+        {
+            assert_eq!(
+            parse_tree.to_string().trim(),
+            r#"
+
+P
+├─ O
+│  └─ y
+├─ x
+├─ O
+│  └─ y
+└─ z
+
+            "#
+            .trim(),
+        );
+        }
+    }
+}
