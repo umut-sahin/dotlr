@@ -233,11 +233,13 @@ pub struct Grammar {
     start_symbol: Symbol,
     empty_symbols: IndexSet<Symbol>,
     constant_tokens: IndexSet<ConstantToken>,
-    #[cfg_attr(feature = "serde", serde(serialize_with = "utils::serialize_regex_map"))]
+    #[cfg_attr(
+        feature = "serde",
+        serde(serialize_with = "utils::serialize_regex_token_to_regex_map")
+    )]
     regular_expressions: IndexMap<RegexToken, Regex>,
     rules: Vec<Rule>,
 }
-
 
 impl Grammar {
     /// Creates a grammar from a grammar string.
@@ -278,6 +280,62 @@ impl Grammar {
     }
 }
 
+#[cfg(feature = "wasm")]
+#[cfg_attr(feature = "wasm", wasm_bindgen)]
+impl Grammar {
+    /// Creates a grammar from a grammar string (WASM).
+    pub fn parse_wasm(grammar_string: &str) -> Result<Grammar, JsValue> {
+        match Grammar::parse(grammar_string) {
+            Ok(grammar) => Ok(grammar),
+            Err(error) => Err(serde_wasm_bindgen::to_value(&error)?),
+        }
+    }
+}
+
+#[cfg(feature = "wasm")]
+#[cfg_attr(feature = "wasm", wasm_bindgen)]
+impl Grammar {
+    /// Gets the symbols of the grammar (WASM).
+    pub fn symbols_wasm(&self) -> Result<JsValue, JsValue> {
+        Ok(serde_wasm_bindgen::to_value(&self.symbols)?)
+    }
+
+    /// Gets the start symbol of the grammar (WASM).
+    pub fn start_symbol_wasm(&self) -> Result<JsValue, JsValue> {
+        Ok(serde_wasm_bindgen::to_value(&self.start_symbol)?)
+    }
+
+    /// Gets the empty symbols of the grammar (WASM).
+    pub fn rules_wasm(&self) -> Result<JsValue, JsValue> {
+        Ok(serde_wasm_bindgen::to_value(&self.rules)?)
+    }
+
+    /// Gets the constant tokens of the grammar (WASM).
+    pub fn to_string_wasm(&self) -> String {
+        self.to_string()
+    }
+
+    /// Gets the regular expressions of the grammar (WASM).
+    pub fn constant_tokens_wasm(&self) -> Result<JsValue, JsValue> {
+        Ok(serde_wasm_bindgen::to_value(&self.constant_tokens)?)
+    }
+
+    /// Gets the rules of the grammar (WASM).
+    pub fn regular_expressions_wasm(&self) -> Result<JsValue, JsValue> {
+        let index_map: IndexMap<RegexToken, String> = self
+            .regular_expressions
+            .iter()
+            .map(|(name, regex)| (name.clone(), regex.to_string()))
+            .collect();
+        Ok(serde_wasm_bindgen::to_value(&index_map)?)
+    }
+
+    /// Clones the grammar (WASM).
+    pub fn clone_wasm(&self) -> Grammar {
+        self.clone()
+    }
+}
+
 impl Display for Grammar {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         for rule in self.rules.iter() {
@@ -293,45 +351,6 @@ impl Display for Grammar {
     }
 }
 
-#[cfg(feature = "wasm")]
-#[cfg_attr(feature = "wasm", wasm_bindgen)]
-impl Grammar {
-    pub fn parse_wasm(grammar_string: &str) -> Result<Grammar, JsValue> {
-        match Grammar::parse(grammar_string) {
-            Ok(grammar) => Ok(grammar),
-            Err(error) => Err(serde_wasm_bindgen::to_value(&error)?),
-        }
-    }
-}
-
-#[cfg(feature = "wasm")]
-#[cfg_attr(feature = "wasm", wasm_bindgen)]
-impl Grammar {
-    pub fn symbols_wasm(&self) -> Result<JsValue, JsValue> {
-        Ok(serde_wasm_bindgen::to_value(&self.symbols)?)
-    }
-    pub fn start_symbol_wasm(&self) -> Result<JsValue, JsValue> {
-        Ok(serde_wasm_bindgen::to_value(&self.start_symbol)?)
-    }
-    pub fn rules_wasm(&self) -> Result<JsValue, JsValue> {
-        Ok(serde_wasm_bindgen::to_value(&self.rules)?)
-    }
-    pub fn to_string_wasm(&self) -> String {
-        self.to_string()
-    }
-    pub fn constant_tokens_wasm(&self) -> Result<JsValue, JsValue> {
-        Ok(serde_wasm_bindgen::to_value(&self.constant_tokens)?)
-    }
-
-    pub fn regular_expressions_wasm(&self) -> Result<JsValue, JsValue> {
-        let index_map: IndexMap<RegexToken, String> =
-            self.regular_expressions.iter().map(|(k, v)| (k.clone(), v.to_string())).collect();
-        Ok(serde_wasm_bindgen::to_value(&index_map)?)
-    }
-    pub fn clone_wasm(&self) -> Grammar {
-        self.clone()
-    }
-}
 
 /// Internal module to parse grammar strings.
 mod grammar_parser {

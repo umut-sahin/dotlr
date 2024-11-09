@@ -1,6 +1,7 @@
 use crate::prelude::*;
 
-/// LR(1) parser of a grammar.
+
+/// LR(1) or LALR(1) parser of a grammar.
 #[cfg_attr(feature = "wasm", wasm_bindgen)]
 #[cfg_attr(feature = "serde", derive(Serialize))]
 #[cfg_attr(feature = "serde", serde(crate = "serde_renamed"))]
@@ -12,7 +13,6 @@ pub struct Parser {
     automaton: Automaton,
     parsing_tables: ParsingTables,
 }
-
 
 impl Parser {
     /// Crates an LR(1) parser of a grammar.
@@ -95,7 +95,7 @@ impl Parser {
         let (initial_new_lines, initial_newline_offset) = utils::count_new_lines(&input[..offset]);
         let mut line = initial_new_lines + 1;
         let mut last_newline_offset = initial_newline_offset.unwrap_or(0);
-        let mut column = utils::count_col_position(&input[last_newline_offset..offset]);
+        let mut column = input[last_newline_offset..offset].chars().count() + 1;
         while !remaining_input.is_empty() {
             let mut matching_token = None;
             let mut matching_slice = "";
@@ -118,7 +118,7 @@ impl Parser {
             }
 
             if matching_token.is_none() {
-                let span = Span { offset, len: 1, line, column };
+                let span = Span { offset, length: 1, line, column };
                 return Err(ParsingError::UnknownToken {
                     token: format_smolstr!("{}", remaining_input.chars().next().unwrap()),
                     span,
@@ -127,7 +127,7 @@ impl Parser {
 
             let token = Spanned::new(matching_token.unwrap(), Span {
                 offset,
-                len: matching_slice.len(),
+                length: matching_slice.len(),
                 line,
                 column,
             });
@@ -153,9 +153,9 @@ impl Parser {
                 last_newline_offset = old_offset + whitespace_newline_offset;
             }
             // skip the newline character
-            column = utils::count_col_position(&input[last_newline_offset..offset]);
+            column = input[last_newline_offset..offset].chars().count() + 1;
         }
-        let eof = Spanned::new(Token::Eof, Span { offset, len: 0, line, column });
+        let eof = Spanned::new(Token::Eof, Span { offset, length: 0, line, column });
         tokens.push((eof, "\0"));
 
         Ok(tokens)
@@ -243,7 +243,7 @@ impl Parser {
         let (mut current_token, mut current_slice) = remaining_tokens.pop().unwrap();
         loop {
             let current_state = *state_stack.last().unwrap();
-            let action_to_take = match self.action_table()[current_state].get(current_token.value())
+            let action_to_take = match self.action_table()[current_state].get(current_token.deref())
             {
                 Some(actions) => {
                     assert_eq!(actions.len(), 1);
@@ -591,37 +591,46 @@ impl Parser {
 #[cfg(feature = "wasm")]
 #[cfg_attr(feature = "wasm", wasm_bindgen)]
 impl Parser {
+    /// Crates an LR(1) parser of a grammar (WASM).
     pub fn new_wasm(grammar: Grammar) -> Result<Parser, WasmParserError> {
-        Parser::lr(grammar).map_err(WasmParserError::new)
+        Ok(Parser::lr(grammar)?)
     }
+
+    /// Crates an LALR(1) parser of a grammar (WASM).
     pub fn new_lalr_wasm(grammar: Grammar) -> Result<Parser, WasmParserError> {
-        Parser::lalr(grammar).map_err(WasmParserError::new)
+        Ok(Parser::lalr(grammar)?)
     }
 }
 
 #[cfg(feature = "wasm")]
 #[cfg_attr(feature = "wasm", wasm_bindgen)]
 impl Parser {
+    /// Gets the first table of the symbols in the grammar of the parser (WASM).
     pub fn first_table_wasm(&self) -> Result<JsValue, JsValue> {
         Ok(serde_wasm_bindgen::to_value(&self.first_table)?)
     }
 
+    /// Gets the follow table of the symbols in the grammar of the parser (WASM).
     pub fn follow_table_wasm(&self) -> Result<JsValue, JsValue> {
         Ok(serde_wasm_bindgen::to_value(&self.follow_table)?)
     }
 
+    /// Gets the automaton of the grammar of the parser (WASM).
     pub fn automaton_wasm(&self) -> Result<JsValue, JsValue> {
         Ok(serde_wasm_bindgen::to_value(&self.automaton)?)
     }
 
+    /// Gets the parsing tables of the parser (WASM).
     pub fn parsing_tables_wasm(&self) -> Result<JsValue, JsValue> {
         Ok(serde_wasm_bindgen::to_value(&self.parsing_tables)?)
     }
 
+    /// Gets the action table of the parser (WASM).
     pub fn action_table_wasm(&self) -> Result<JsValue, JsValue> {
         Ok(serde_wasm_bindgen::to_value(&self.parsing_tables.action_table())?)
     }
 
+    /// Gets the goto table of the parser (WASM).
     pub fn goto_table_wasm(&self) -> Result<JsValue, JsValue> {
         Ok(serde_wasm_bindgen::to_value(&self.parsing_tables.goto_table())?)
     }
@@ -630,6 +639,7 @@ impl Parser {
 #[cfg(feature = "wasm")]
 #[cfg_attr(feature = "wasm", wasm_bindgen)]
 impl Parser {
+    /// Tokenizes an input into a stream of tokens and their corresponding input slices (WASM).
     pub fn tokenize_wasm(&self, input: &str) -> Result<JsValue, JsValue> {
         match self.tokenize(input) {
             Ok(tokens) => Ok(serde_wasm_bindgen::to_value(&tokens)?),
@@ -637,6 +647,7 @@ impl Parser {
         }
     }
 
+    /// Parses a tokenized input (WASM).
     pub fn parse_wasm(&self, input: &str) -> Result<JsValue, JsValue> {
         let tokens = self.tokenize(input);
         let tokens = match tokens {
@@ -649,6 +660,7 @@ impl Parser {
         }
     }
 
+    /// Traces the parsing of a tokenized input (WASM).
     pub fn trace_wasm(&self, input: &str) -> Result<Vec<JsValue>, JsValue> {
         let tokens = self.tokenize(input);
         let tokens = match tokens {

@@ -1,67 +1,72 @@
 use crate::prelude::*;
 
-/// Position information of a token in the input string.
+
+/// Position of a token in the input string.
 #[cfg_attr(feature = "serde", derive(Serialize))]
 #[cfg_attr(feature = "serde", serde(crate = "serde_renamed"))]
 #[derive(Clone, Debug, PartialEq)]
 pub struct Span {
     /// Byte offset of the span in the input string.
     pub offset: usize,
-    /// Length of the span.
-    pub len: usize,
+    /// Length of the span in terms of bytes.
+    pub length: usize,
     /// Line number of the span in the input string.
     pub line: usize,
     /// Column number of the span in the input string.
     pub column: usize,
 }
 
-/// Wrapper over any type with span information.
+
+/// Wrapper for objects with spans.
 #[cfg(not(feature = "serde"))]
 #[derive(Clone, Debug)]
 pub struct Spanned<T: Debug + Clone> {
-    /// The value of the span.
-    pub value: T,
-    /// The span information.
+    /// Spanned object.
+    object: T,
+    /// Span of the object.
     span: Span,
 }
-/// Wrapper over any type with span information.
+
+/// Wrapper for objects with spans.
 #[cfg(feature = "serde")]
 #[cfg_attr(feature = "serde", derive(Serialize))]
 #[cfg_attr(feature = "serde", serde(crate = "serde_renamed"))]
 #[derive(Clone, Debug)]
 pub struct Spanned<T: Serialize + Debug + Clone> {
-    /// Span of the value.
-    value: T,
-    /// Span information.
+    /// Spanned object.
+    object: T,
+    /// Span of the object.
     span: Span,
 }
-
 
 impl<
     #[cfg(not(feature = "serde"))] T: Debug + Clone,
     #[cfg(feature = "serde")] T: Serialize + Debug + Clone,
 > Spanned<T>
 {
-    /// Creates a new Spanned value.
-    pub fn new(value: T, span: Span) -> Self {
-        Self { value, span }
+    /// Creates a new spanned object.
+    pub fn new(object: T, span: Span) -> Spanned<T> {
+        Spanned { object, span }
     }
-    /// Gets the span information.
+
+    /// Gets the spanned object.
+    pub fn object(&self) -> &T {
+        &self.object
+    }
+
+    /// Gets the span of the object.
     pub fn span(&self) -> &Span {
         &self.span
     }
 
-    /// Converts the Spanned value into a tuple of the value and the span.
+    /// Splits the spanned object into the object and the span.
     pub fn into_components(self) -> (T, Span) {
-        (self.value, self.span)
+        (self.object, self.span)
     }
-    /// Gets the value of the span.
-    pub fn value(&self) -> &T {
-        &self.value
-    }
-    /// Converts the Spanned value into the value.
-    pub fn into_value(self) -> T {
-        self.value
+
+    /// Extracts the object destroys the span.
+    pub fn into_object(self) -> T {
+        self.object
     }
 }
 
@@ -72,7 +77,7 @@ impl<
 {
     type Target = T;
 
-    fn deref(&self) -> &Self::Target {
-        &self.value
+    fn deref(&self) -> &T {
+        &self.object
     }
 }

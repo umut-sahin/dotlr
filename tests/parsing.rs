@@ -339,21 +339,21 @@ fn correctly_trace_parsing_of_optional_grammar() {
             // +------+-------------+--------------+-----------------+-----------------------------+
 
             assert_eq!(
-            parse_trace.steps().iter().map(|step| *step.action_taken()).collect::<Vec<_>>(),
-            [
-                Action::Reduce { rule_index: 2 },
-                Action::Shift { next_state: 3 },
-                Action::Shift { next_state: 5 },
-                Action::Reduce { rule_index: 1 },
-                Action::Shift { next_state: 6 },
-                Action::Accept { rule_index: 0 }
-            ],
-        );
+                parse_trace.steps().iter().map(|step| *step.action_taken()).collect::<Vec<_>>(),
+                [
+                    Action::Reduce { rule_index: 2 },
+                    Action::Shift { next_state: 3 },
+                    Action::Shift { next_state: 5 },
+                    Action::Reduce { rule_index: 1 },
+                    Action::Shift { next_state: 6 },
+                    Action::Accept { rule_index: 0 }
+                ],
+            );
         }
         {
             assert_eq!(
-            parse_tree.to_string().trim(),
-            r#"
+                parse_tree.to_string().trim(),
+                r#"
 
 P
 ├─ O
@@ -363,8 +363,8 @@ P
 └─ z
 
             "#
-            .trim(),
-        );
+                .trim(),
+            );
         }
     }
     {
@@ -388,20 +388,20 @@ P
             // +------+-------------+--------------+-----------------+-----------------------------+
 
             assert_eq!(
-            parse_trace.steps().iter().map(|step| *step.action_taken()).collect::<Vec<_>>(),
-            [
-                Action::Reduce { rule_index: 2 },
-                Action::Shift { next_state: 3 },
-                Action::Reduce { rule_index: 2 },
-                Action::Shift { next_state: 6 },
-                Action::Accept { rule_index: 0 }
-            ],
-        );
+                parse_trace.steps().iter().map(|step| *step.action_taken()).collect::<Vec<_>>(),
+                [
+                    Action::Reduce { rule_index: 2 },
+                    Action::Shift { next_state: 3 },
+                    Action::Reduce { rule_index: 2 },
+                    Action::Shift { next_state: 6 },
+                    Action::Accept { rule_index: 0 }
+                ],
+            );
         }
         {
             assert_eq!(
-            parse_tree.to_string().trim(),
-            r#"
+                parse_tree.to_string().trim(),
+                r#"
 
 P
 ├─ O
@@ -410,8 +410,8 @@ P
 └─ z
 
             "#
-            .trim(),
-        );
+                .trim(),
+            );
         }
     }
     {
@@ -439,22 +439,22 @@ P
             // +------+-------------+--------------+-------------------+-----------------------------+
 
             assert_eq!(
-            parse_trace.steps().iter().map(|step| *step.action_taken()).collect::<Vec<_>>(),
-            [
-                Action::Shift { next_state: 2 },
-                Action::Reduce { rule_index: 1 },
-                Action::Shift { next_state: 3 },
-                Action::Shift { next_state: 5 },
-                Action::Reduce { rule_index: 1 },
-                Action::Shift { next_state: 6 },
-                Action::Accept { rule_index: 0 }
-            ],
-        );
+                parse_trace.steps().iter().map(|step| *step.action_taken()).collect::<Vec<_>>(),
+                [
+                    Action::Shift { next_state: 2 },
+                    Action::Reduce { rule_index: 1 },
+                    Action::Shift { next_state: 3 },
+                    Action::Shift { next_state: 5 },
+                    Action::Reduce { rule_index: 1 },
+                    Action::Shift { next_state: 6 },
+                    Action::Accept { rule_index: 0 }
+                ],
+            );
         }
         {
             assert_eq!(
-            parse_tree.to_string().trim(),
-            r#"
+                parse_tree.to_string().trim(),
+                r#"
 
 P
 ├─ O
@@ -465,8 +465,8 @@ P
 └─ z
 
             "#
-            .trim(),
-        );
+                .trim(),
+            );
         }
     }
 }

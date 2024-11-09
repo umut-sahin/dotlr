@@ -2,12 +2,15 @@
 use crate::prelude::*;
 
 
-/// The `colored` crate uses OS specific features to colorize the output, which are not available in
-/// the WASM target. This trait provides a mock implementation of the `colored` crate for the WASM target.
+/// We're using `colored` crate, which use OS specific features to colorize the output.
+/// Since those features are not available in WebAssembly, we create a mock implementation
+/// for the `colored` methods we use.
 #[cfg(target_family = "wasm")]
 pub trait MockColored {
     fn green(&self) -> String;
+
     fn cyan(&self) -> String;
+
     fn bold(&self) -> String;
 }
 
@@ -24,26 +27,28 @@ impl<T: AsRef<str>> MockColored for T {
     }
 }
 
-/// Serializes a map of regex objects to a map of regex strings.
+
+/// Serializes a map of regex tokens to compiled regex objects.
 #[cfg(feature = "serde")]
-pub fn serialize_regex_map<S>(
-    map: &IndexMap<RegexToken, Regex>,
+pub fn serialize_regex_token_to_regex_map<S>(
+    regex_token_to_regex: &IndexMap<RegexToken, Regex>,
     serializer: S,
 ) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
 {
-    let mut map_serializer = serializer.serialize_map(Some(map.len()))?;
-    for (key, value) in map {
+    let mut map_serializer = serializer.serialize_map(Some(regex_token_to_regex.len()))?;
+    for (key, value) in regex_token_to_regex {
         map_serializer.serialize_entry(key, &value.to_string())?;
     }
     map_serializer.end()
 }
 
 
-/// Counts the number of new lines in a slice and returns the offset after the last new line.
+/// Counts the number of new lines in a slice and computes the offset after the last new line.
 pub fn count_new_lines(slice: &str) -> (usize, Option<usize>) {
     let mut offset_after_newline = None;
+
     let mut count = 0;
     for (offset, byte) in slice.bytes().enumerate() {
         if byte == b'\n' {
@@ -51,12 +56,6 @@ pub fn count_new_lines(slice: &str) -> (usize, Option<usize>) {
             count += 1;
         }
     }
-    (count, offset_after_newline)
-}
 
-/// Counts column position of a char.
-///
-/// The resulting column position is the 1 indexed utf-8 charater in the slice.
-pub fn count_col_position(slice: &str) -> usize {
-    slice.chars().count() + 1
+    (count, offset_after_newline)
 }

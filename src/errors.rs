@@ -84,37 +84,6 @@ pub enum ParserError {
     Conflict { parser: Box<Parser>, state: usize, token: Token },
 }
 
-#[cfg(feature = "wasm")]
-#[cfg_attr(feature = "wasm", wasm_bindgen)]
-pub struct WasmParserError {
-    error: ParserError,
-}
-
-#[cfg(feature = "wasm")]
-impl WasmParserError {
-    pub fn new(error: ParserError) -> Self {
-        WasmParserError { error }
-    }
-}
-
-#[cfg(feature = "wasm")]
-#[cfg_attr(feature = "wasm", wasm_bindgen)]
-impl WasmParserError {
-    pub fn to_string_wasm(&self) -> String {
-        format!("{}", self.error)
-    }
-    pub fn serialize(&self) -> Result<JsValue, JsValue> {
-        serde_wasm_bindgen::to_value(&self.error).map_err(JsValue::from)
-    }
-    pub fn into_conflict_parser(self) -> Result<Parser, JsValue> {
-        match self.error {
-            //&Box<Parser>
-            ParserError::Conflict { parser, .. } => Ok(*parser),
-            _ => Err(JsValue::from("Error is not a conflict")),
-        }
-    }
-}
-
 
 /// Parsing error of an input tried to be parsed with a parser.
 #[cfg_attr(feature = "serde", derive(Serialize))]
@@ -160,4 +129,39 @@ pub enum ParsingError {
         },
     )]
     UnexpectedEof { expected: SmallVec<[Token; 2]>, span: Span },
+}
+
+
+/// Parser error of a parser tried to be constructed from a grammar (WASM).
+#[cfg(feature = "wasm")]
+#[cfg_attr(feature = "wasm", wasm_bindgen)]
+pub struct WasmParserError(ParserError);
+
+#[cfg(feature = "wasm")]
+#[cfg_attr(feature = "wasm", wasm_bindgen)]
+impl WasmParserError {
+    /// Prints the parser error to a string.
+    pub fn to_string_wasm(&self) -> String {
+        format!("{}", self.0)
+    }
+
+    /// Serializes the parser error to a JavaScript value.
+    pub fn serialize(&self) -> Result<JsValue, JsValue> {
+        serde_wasm_bindgen::to_value(&self.0).map_err(JsValue::from)
+    }
+
+    /// Converts the parser error to the conflicted parser if error was a conflict error.
+    pub fn into_conflict_parser(self) -> Result<Parser, JsValue> {
+        match self.0 {
+            ParserError::Conflict { parser, .. } => Ok(*parser),
+            _ => Err(JsValue::from("ParserError is not a `Conflict` error")),
+        }
+    }
+}
+
+#[cfg(feature = "wasm")]
+impl From<ParserError> for WasmParserError {
+    fn from(error: ParserError) -> WasmParserError {
+        WasmParserError(error)
+    }
 }
