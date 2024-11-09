@@ -1,7 +1,5 @@
-use {
-    crate::prelude::*,
-    std::io::BufWriter,
-};
+use crate::prelude::*;
+
 
 /// Parse tree of a parsed input.
 #[cfg_attr(feature = "serde", derive(Serialize))]
@@ -26,6 +24,7 @@ pub enum Tree<'i> {
         pattern: Vec<Tree<'i>>,
     },
 }
+
 impl Tree<'_> {
     /// Dumps the parse tree to stdout.
     pub fn dump(&self) {

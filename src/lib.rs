@@ -49,19 +49,6 @@ pub use {
 };
 
 mod prelude {
-    #[cfg(feature = "serde")]
-    pub use serde_renamed::Serialize;
-
-    #[cfg(feature = "wasm")]
-    pub use {
-        errors::WasmParserError,
-        wasm_bindgen::prelude::*,
-    };
-
-    #[cfg(not(target_family = "wasm"))]
-    pub use colored::*;
-    #[cfg(target_family = "wasm")]
-    pub use utils::MockColored;
     pub use {
         super::*,
         indexmap::{
@@ -102,13 +89,28 @@ mod prelude {
                 Debug,
                 Display,
             },
+            io::BufWriter,
             ops::Deref,
         },
         thiserror::Error,
     };
+
     #[cfg(feature = "serde")]
-    pub use {
-        serde_renamed::Serializer,
-        serde_renamed::ser::SerializeMap,
+    pub use serde_renamed::{
+        Serialize,
+        Serializer,
+        ser::SerializeMap,
     };
+
+    #[cfg(feature = "wasm")]
+    pub use {
+        errors::WasmParserError,
+        wasm_bindgen::prelude::*,
+    };
+
+    #[cfg(not(target_family = "wasm"))]
+    pub use colored::*;
+
+    #[cfg(target_family = "wasm")]
+    pub use utils::MockColored;
 }

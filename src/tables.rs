@@ -123,7 +123,6 @@ impl FollowTable {
                                 },
                             }
                         }
-
                         if rest_of_the_pattern_can_be_empty {
                             if let Some(rule_symbol_follow) = follow_table.get(rule_symbol) {
                                 possible_follow_tokens.extend(rule_symbol_follow.iter().cloned());

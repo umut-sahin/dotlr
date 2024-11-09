@@ -43,9 +43,9 @@ pub struct Trace<'i> {
     steps: Vec<Step<'i>>,
 }
 
-impl Trace<'_> {
+impl<'i> Trace<'i> {
     /// Creates a new trace.
-    pub fn new() -> Self {
+    pub fn new() -> Trace<'i> {
         Self { steps: vec![] }
     }
 }
@@ -91,7 +91,7 @@ impl Trace<'_> {
                     }
                 })
                 .join(" ");
-            let remaining_input = step.remaining_tokens.iter().rev().map(|t| t.value()).join(" ");
+            let remaining_input = step.remaining_tokens.iter().rev().map(|t| t.deref()).join(" ");
             let action_taken = match step.action_taken {
                 Action::Shift { next_state } => {
                     format!("Shift {}", next_state)

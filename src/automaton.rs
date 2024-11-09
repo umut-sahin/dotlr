@@ -1,7 +1,7 @@
 use crate::prelude::*;
 
 
-/// Item of a state of an LR(1) automaton.
+/// Item of a state of an LR(1) or an LALR(1) automaton.
 #[cfg_attr(feature = "serde", derive(Serialize))]
 #[cfg_attr(feature = "serde", serde(crate = "serde_renamed"))]
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -60,7 +60,7 @@ impl Display for Item {
 }
 
 
-/// State of an LR(1) automaton.
+/// State of an LR(1) or an LALR(1) automaton.
 #[derive(Clone, Debug, Default, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize))]
 #[cfg_attr(feature = "serde", serde(crate = "serde_renamed"))]
@@ -184,7 +184,7 @@ impl PartialEq for State {
 }
 
 
-/// LR(1) automaton of a grammar.
+/// LR(1) or LALR(1) automaton of a grammar.
 #[cfg_attr(feature = "wasm", wasm_bindgen)]
 #[cfg_attr(feature = "serde", derive(Serialize))]
 #[cfg_attr(feature = "serde", serde(crate = "serde_renamed"))]
