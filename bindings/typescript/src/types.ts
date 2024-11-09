@@ -161,7 +161,7 @@ export type Span = {
 };
 
 export type Spanned<T> = {
-  span: Span
+  span: Span;
   object: T;
 };
 
