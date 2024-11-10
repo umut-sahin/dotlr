@@ -267,7 +267,7 @@ Yes, you can depend on the `dotlr` crate from [crates.io](https://crates.io/crat
 Paste the following to your `dependencies` section of your `Cargo.toml`:
 
 ```toml
-dotlr = { version = "0.3", default-features = false }
+dotlr = { version = "0.4", default-features = false }
 ```
 
 ### Example
