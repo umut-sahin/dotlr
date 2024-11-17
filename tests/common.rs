@@ -12,6 +12,7 @@ pub mod grammars {
     pub const G9: &str = include_str!("../assets/grammars/correct/g9.lr");
     pub const G10: &str = include_str!("../assets/grammars/correct/g10.lr");
     pub const G11: &str = include_str!("../assets/grammars/correct/g11.lr");
+    pub const INDIRECT_EMPTY: &str = include_str!("../assets/grammars/correct/indirect_empty.lr");
     pub const JSON: &str = include_str!("../assets/grammars/correct/json.lr");
     pub const NOT_LALR: &str = include_str!("../assets/grammars/correct/not-lalr.lr");
     pub const OPTIONAL: &str = include_str!("../assets/grammars/correct/optional.lr");

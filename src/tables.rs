@@ -12,6 +12,7 @@ impl FirstTable {
     /// Constructs the first table from the grammar.
     pub fn construct(grammar: &Grammar) -> FirstTable {
         let mut first_table = IndexMap::new();
+        let mut indirectly_empty_symbols = IndexSet::new();
 
         let mut done = false;
         while !done {
@@ -32,7 +33,9 @@ impl FirstTable {
                                         .cloned(),
                                 );
                             }
-                            if !grammar.empty_symbols().contains(symbol) {
+                            if !grammar.empty_symbols().contains(symbol)
+                                && !indirectly_empty_symbols.contains(symbol)
+                            {
                                 break;
                             }
                         },
@@ -42,6 +45,7 @@ impl FirstTable {
                         },
                     }
                     if index == rule.pattern().len() - 1 {
+                        indirectly_empty_symbols.insert(rule.symbol());
                         possible_first_tokens.insert(Token::Empty);
                     }
                 }

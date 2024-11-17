@@ -146,6 +146,97 @@ fn raising_correct_error_when_creating_lalr_parser_for_non_lalr_grammar() {
 
 #[test]
 #[cfg_attr(target_family = "wasm", wasm_bindgen_test)]
+fn correctly_creating_first_and_follow_sets_for_indirectly_empty_grammar() {
+    let grammar = Grammar::parse(common::grammars::INDIRECT_EMPTY).unwrap();
+    let parser = Parser::lr(grammar).unwrap();
+
+    let first_table = parser.first_table();
+    {
+        // +--------+-----------+
+        // | Symbol | First Set |
+        // +--------+-----------+
+        // | C      | { ε }     |
+        // | D      | { ε }     |
+        // | B      | { 'x' }   |
+        // | A      | { ε }     |
+        // | S      | { 'x' }   |
+        // +--------+-----------+
+
+        #[rustfmt::skip]
+    assert_eq!(
+        *first_table.deref(),
+        [
+            (
+                Symbol::from("C"),
+                [Token::Empty.into()].into(),
+            ),
+            (
+                Symbol::from("D"),
+                [Token::Empty.into()].into(),
+            ),
+            (
+                Symbol::from("B"),
+                [ConstantToken::from("x").into()].into(),
+            ),
+            (
+                Symbol::from("A"),
+                [Token::Empty.into()].into(),
+            ),
+            (
+                Symbol::from("S"),
+                [ConstantToken::from("x").into()].into(),
+            )
+        ]
+            .into_iter()
+            .collect::<IndexMap<_, _>>()
+    );
+    }
+
+    let follow_table = parser.follow_table();
+    {
+        // +--------+------------+
+        // | Symbol | Follow Set |
+        // +--------+------------+
+        // | C      | { 'x' }    |
+        // | D      | { 'x' }    |
+        // | B      | { $ }      |
+        // | A      | { 'x' }    |
+        // | S      | { $ }      |
+        // +--------+------------+
+
+        #[rustfmt::skip]
+    assert_eq!(
+        *follow_table.deref(),
+        [
+            (
+                Symbol::from("C"),
+                [ConstantToken::from("x").into()].into(),
+            ),
+            (
+                Symbol::from("D"),
+                [ConstantToken::from("x").into()].into(),
+            ),
+            (
+                Symbol::from("B"),
+                [Token::Eof].into(),
+            ),
+            (
+                Symbol::from("A"),
+                [ConstantToken::from("x").into()].into(),
+            ),
+            (
+                Symbol::from("S"),
+                [Token::Eof].into(),
+            ),
+        ]
+            .into_iter()
+            .collect::<IndexMap<_, _>>()
+    );
+    }
+}
+
+#[test]
+#[cfg_attr(target_family = "wasm", wasm_bindgen_test)]
 fn correctly_creating_lr_parser_for_binary_addition_grammar() {
     let grammar = Grammar::parse(common::grammars::BINARY_ADDITION).unwrap();
     let parser = Parser::lr(grammar).unwrap();
